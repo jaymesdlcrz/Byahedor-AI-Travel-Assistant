@@ -1,0 +1,6 @@
+{
+  "name": "Byahedor - AI Travel Assistant",
+  "description": "A modern Filipino-inspired AI travel companion to discover destinations, plan personalized itineraries, manage budgets, customize packing checklists, and explore journeys.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,21 @@
+# Configuration for Firebase App Hosting (full-stack Next.js, Vite, and Express apps)
+kind: AppHostingYaml
+schemaVersion: v1
+
+runConfig:
+  minInstances: 0
+  maxInstances: 5
+  concurrency: 80
+  cpu: 1
+  memoryMiB: 512
+
+env:
+  - variable: NODE_ENV
+    value: production
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: GEMINI_API_KEY
+    secret: GEMINI_API_KEY
+    availability:
+      - RUNTIME

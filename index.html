@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Byahedor — AI Travel Assistant | Plan. Explore. Byahe.</title>
+    <meta name="description" content="Byahedor is your Filipino-inspired AI travel companion to discover destinations, plan personalized itineraries, calculate budgets, and explore journeys." />
+    <meta property="og:title" content="Byahedor — AI Travel Assistant" />
+    <meta property="og:description" content="Your AI companion for every journey. Plan. Explore. Byahe." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0%25' stop-color='%23087EA4'/><stop offset='100%25' stop-color='%2339A96B'/></linearGradient></defs><path d='M50 8C33.4 8 20 21.4 20 38c0 22 26 50 28.5 52.7a2 2 0 0 0 3 0C54 88 80 60 80 38 80 21.4 66.6 8 50 8z' fill='url(%23g)'/><path d='M50 24l-14 18h8v14h12V42h8z' fill='%23ffffff'/><circle cx='68' cy='22' r='4' fill='%23FFB84D'/></svg>" />
+    <script>
+      (function() {
+        try {
+          var mode = localStorage.getItem('byahedor_theme_mode');
+          var isDark = false;
+          if (mode === 'dark') {
+            isDark = true;
+          } else if (mode === 'light') {
+            isDark = false;
+          } else {
+            var legacy = localStorage.getItem('byahedor_dark_mode');
+            if (legacy !== null) {
+              isDark = legacy === 'true';
+            } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+              isDark = true;
+            }
+          }
+          if (isDark) {
+            document.documentElement.classList.add('dark');
+            document.documentElement.style.colorScheme = 'dark';
+          } else {
+            document.documentElement.classList.remove('dark');
+            document.documentElement.style.colorScheme = 'light';
+          }
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+  <body class="bg-[#F5FAFC] text-[#102A43] dark:bg-[#09182a] dark:text-slate-100 antialiased selection:bg-[#4DB8E8]/30 transition-colors duration-150">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+

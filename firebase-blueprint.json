@@ -1,0 +1,208 @@
+{
+  "entities": {
+    "SavedTrip": {
+      "title": "SavedTrip",
+      "description": "Customized AI or user-created travel itinerary saved by a user",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Unique identifier of the trip"
+        },
+        "ownerId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Firebase Auth UID of the trip owner"
+        },
+        "title": {
+          "type": "string",
+          "maxLength": 200,
+          "description": "Title or headline of the trip itinerary"
+        },
+        "destination": {
+          "type": "string",
+          "maxLength": 100,
+          "description": "Primary travel destination"
+        },
+        "origin": {
+          "type": "string",
+          "maxLength": 100,
+          "description": "Departure origin or airport"
+        },
+        "departureDate": {
+          "type": "string",
+          "maxLength": 50,
+          "description": "Estimated or planned departure date"
+        },
+        "days": {
+          "type": "number",
+          "description": "Duration of the trip in days"
+        },
+        "travelers": {
+          "type": "number",
+          "description": "Number of travelers"
+        },
+        "totalBudget": {
+          "type": "number",
+          "description": "Total estimated trip budget in Philippine Pesos (PHP)"
+        },
+        "budgetBreakdown": {
+          "type": "object",
+          "description": "Detailed breakdown by transportation, accommodation, food, activities, and emergency"
+        },
+        "overview": {
+          "type": "string",
+          "maxLength": 3000,
+          "description": "Summary and highlights of the itinerary"
+        },
+        "daysPlan": {
+          "type": "array",
+          "description": "Daily scheduled activities and time slots"
+        },
+        "localTips": {
+          "type": "array",
+          "description": "Practical local advice and reminders"
+        },
+        "coverImage": {
+          "type": "string",
+          "maxLength": 1000,
+          "description": "Cover photo URL for destination banner"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when itinerary was created"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when itinerary was last modified"
+        }
+      },
+      "required": ["id", "ownerId", "title", "destination", "days", "travelers", "totalBudget", "overview", "daysPlan"]
+    },
+    "ChecklistItem": {
+      "title": "ChecklistItem",
+      "description": "Packing or travel prep checklist item",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Unique checklist item ID"
+        },
+        "ownerId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Firebase Auth UID of the item owner"
+        },
+        "label": {
+          "type": "string",
+          "maxLength": 200,
+          "description": "Item description or task title"
+        },
+        "category": {
+          "type": "string",
+          "maxLength": 100,
+          "description": "Category such as Documents, Clothing, Electronics, Health"
+        },
+        "isChecked": {
+          "type": "boolean",
+          "description": "Whether the item has been packed or completed"
+        },
+        "isEssential": {
+          "type": "boolean",
+          "description": "Whether the item is an essential packing requirement"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last update timestamp"
+        }
+      },
+      "required": ["id", "ownerId", "label", "category", "isChecked"]
+    },
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User account settings and travel preferences",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Firebase Auth UID"
+        },
+        "email": {
+          "type": "string",
+          "maxLength": 254,
+          "description": "User email address"
+        },
+        "displayName": {
+          "type": "string",
+          "maxLength": 100,
+          "description": "User display name"
+        },
+        "photoURL": {
+          "type": "string",
+          "maxLength": 1000,
+          "description": "User avatar photo URL"
+        },
+        "preferredLanguage": {
+          "type": "string",
+          "maxLength": 50,
+          "description": "Preferred dialect / language (English, Filipino, Bisaya, Taglish)"
+        },
+        "defaultOriginAirport": {
+          "type": "string",
+          "maxLength": 100,
+          "description": "Preferred airport of origin"
+        },
+        "currency": {
+          "type": "string",
+          "maxLength": 10,
+          "description": "Display currency (PHP, USD, EUR, JPY)"
+        },
+        "travelPace": {
+          "type": "string",
+          "maxLength": 50,
+          "description": "Travel pacing: relaxed, balanced, or fast-paced"
+        },
+        "darkMode": {
+          "type": "boolean",
+          "description": "User dark theme preference"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last settings sync timestamp"
+        }
+      },
+      "required": ["userId", "preferredLanguage", "currency"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}/savedTrips/{tripId}": {
+      "schema": "#/entities/SavedTrip",
+      "description": "Private travel itineraries created and saved by the user"
+    },
+    "/users/{userId}/checklistItems/{itemId}": {
+      "schema": "#/entities/ChecklistItem",
+      "description": "Travel checklist and packing items tracked by the user"
+    },
+    "/users/{userId}/profile/settings": {
+      "schema": "#/entities/UserProfile",
+      "description": "Personal account settings, travel preferences, and UI theme"
+    }
+  }
+}

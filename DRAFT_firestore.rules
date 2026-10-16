@@ -1,0 +1,145 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default Deny All
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Health check / connection test collection
+    match /test/{docId} {
+      allow get: if true;
+    }
+
+    // Common security helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Validation for SavedTrip entity
+    function isValidSavedTrip(data, userId) {
+      return data.ownerId == userId
+        && data.ownerId == request.auth.uid
+        && data.id is string
+        && data.id.size() > 0
+        && data.id.size() <= 128
+        && data.title is string
+        && data.title.size() > 0
+        && data.title.size() <= 200
+        && data.destination is string
+        && data.destination.size() > 0
+        && data.destination.size() <= 100
+        && (!('origin' in data) || (data.origin is string && data.origin.size() <= 100))
+        && (!('departureDate' in data) || (data.departureDate is string && data.departureDate.size() <= 50))
+        && data.days is number
+        && data.days > 0
+        && data.days <= 365
+        && data.travelers is number
+        && data.travelers > 0
+        && data.travelers <= 100
+        && data.totalBudget is number
+        && data.totalBudget >= 0
+        && data.totalBudget <= 100000000
+        && data.overview is string
+        && data.overview.size() <= 3000
+        && data.daysPlan is list
+        && data.daysPlan.size() <= 60
+        && (!('localTips' in data) || (data.localTips is list && data.localTips.size() <= 50))
+        && (!('coverImage' in data) || (data.coverImage is string && data.coverImage.size() <= 1000));
+    }
+
+    // Validation for ChecklistItem entity
+    function isValidChecklistItem(data, userId) {
+      return data.ownerId == userId
+        && data.ownerId == request.auth.uid
+        && data.id is string
+        && data.id.size() > 0
+        && data.id.size() <= 128
+        && data.label is string
+        && data.label.size() > 0
+        && data.label.size() <= 200
+        && data.category is string
+        && data.category.size() > 0
+        && data.category.size() <= 100
+        && data.isChecked is bool
+        && (!('isEssential' in data) || data.isEssential is bool);
+    }
+
+    // Validation for UserProfile entity
+    function isValidUserProfile(data, userId) {
+      return data.userId == userId
+        && data.userId == request.auth.uid
+        && data.preferredLanguage is string
+        && data.preferredLanguage.size() <= 50
+        && data.currency is string
+        && data.currency.size() <= 10
+        && (!('defaultOriginAirport' in data) || (data.defaultOriginAirport is string && data.defaultOriginAirport.size() <= 100))
+        && (!('travelPace' in data) || (data.travelPace is string && data.travelPace.size() <= 50))
+        && (!('darkMode' in data) || data.darkMode is bool)
+        && (!('email' in data) || (data.email is string && data.email.size() <= 254))
+        && (!('displayName' in data) || (data.displayName is string && data.displayName.size() <= 100))
+        && (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() <= 1000));
+    }
+
+    // User data trees
+    match /users/{userId} {
+      allow read, write: if isOwner(userId);
+
+      // Saved Itineraries
+      match /savedTrips/{tripId} {
+        allow get: if isOwner(userId) && isValidId(tripId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId)
+          && isValidId(tripId)
+          && incoming().id == tripId
+          && isValidSavedTrip(incoming(), userId);
+        allow update: if isOwner(userId)
+          && isValidId(tripId)
+          && isValidSavedTrip(incoming(), userId)
+          && incoming().ownerId == existing().ownerId
+          && incoming().id == existing().id;
+        allow delete: if isOwner(userId) && isValidId(tripId);
+      }
+
+      // Checklist Items
+      match /checklistItems/{itemId} {
+        allow get: if isOwner(userId) && isValidId(itemId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId)
+          && isValidId(itemId)
+          && incoming().id == itemId
+          && isValidChecklistItem(incoming(), userId);
+        allow update: if isOwner(userId)
+          && isValidId(itemId)
+          && isValidChecklistItem(incoming(), userId)
+          && incoming().ownerId == existing().ownerId;
+        allow delete: if isOwner(userId) && isValidId(itemId);
+      }
+
+      // Account & Travel Preferences
+      match /profile/settings {
+        allow get: if isOwner(userId);
+        allow create, update: if isOwner(userId) && isValidUserProfile(incoming(), userId);
+        allow delete: if isOwner(userId);
+      }
+    }
+  }
+}
