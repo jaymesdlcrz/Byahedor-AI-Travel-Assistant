@@ -297,6 +297,29 @@ export const DestinationExplorer: React.FC<DestinationExplorerProps> = ({
                 </p>
               </div>
 
+              {/* Authentic Photo Gallery */}
+              {activeModalDest.galleryImages && activeModalDest.galleryImages.length > 0 && (
+                <div>
+                  <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 flex items-center justify-between">
+                    <span>Authentic Views & Landmarks</span>
+                    <span className="text-[9px] text-[#087EA4] font-semibold">{activeModalDest.galleryImages.length} photos</span>
+                  </h4>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {activeModalDest.galleryImages.map((imgUrl, gIdx) => (
+                      <div key={gIdx} className="h-20 sm:h-24 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 group relative">
+                        <img 
+                          src={imgUrl} 
+                          alt={`${activeModalDest.name} view ${gIdx + 1}`} 
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          loading="lazy"
+                          referrerPolicy="no-referrer"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Highlights & Top Activities */}
               <div>
                 <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">

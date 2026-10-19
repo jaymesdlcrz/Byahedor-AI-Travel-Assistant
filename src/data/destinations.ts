@@ -8,11 +8,11 @@ export const DESTINATIONS: Destination[] = [
     region: 'Mindanao',
     tagline: 'The Surfing Capital of the Philippines & Tropical Paradise',
     description: 'A teardrop-shaped island famous for world-class surf breaks like Cloud 9, secluded turquoise tidal rock pools, coconut palm tree roads, and pristine island hopping.',
-    heroImage: 'https://images.unsplash.com/photo-1518509562904-e7ef99cdcc86?auto=format&fit=crop&w=1200&q=80',
+    heroImage: 'https://upload.wikimedia.org/wikipedia/commons/4/45/Cloud_9_Boardwalk%2C_Siargao.jpg',
     galleryImages: [
-      'https://images.unsplash.com/photo-1544551763-46a013bb70d5?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1533105079780-92b9be482077?auto=format&fit=crop&w=800&q=80'
+      'https://upload.wikimedia.org/wikipedia/commons/8/83/Cloud_9_Siargao_Island_Sunset.jpg',
+      'https://upload.wikimedia.org/wikipedia/commons/a/a4/The_calm_sea_of_cloud_9_siargao_island_philippines.jpg',
+      'https://upload.wikimedia.org/wikipedia/commons/1/1c/Siargao_island.jpg'
     ],
     estimatedDailyBudgetPHP: 3200,
     bestTimeToVisit: 'March to October (Dry & Sunny), Sept-Nov (Prime Surf Waves)',
@@ -61,10 +61,10 @@ export const DESTINATIONS: Destination[] = [
     region: 'Luzon',
     tagline: 'Towering Limestone Karsts & Secret Emerald Lagoons',
     description: 'World-renowned for striking karst cliffs emerging dramatically from neon turquoise seas, pristine hidden beaches, and unforgettable marine biodiversity in Bacuit Bay.',
-    heroImage: 'https://images.unsplash.com/photo-1516483638261-f4dbaf036963?auto=format&fit=crop&w=1200&q=80',
+    heroImage: 'https://upload.wikimedia.org/wikipedia/commons/8/86/El_Nido_Palawan_Big_Lagoon.jpg',
     galleryImages: [
-      'https://images.unsplash.com/photo-1506929562872-bb421503ef21?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1540206351-d6465b3ac5c1?auto=format&fit=crop&w=800&q=80'
+      'https://upload.wikimedia.org/wikipedia/commons/1/19/The_Last_Frontier%2C_El_Nido_Palawan_Big_Lagoon.jpg',
+      'https://upload.wikimedia.org/wikipedia/commons/a/a5/Big_Lagoon_at_El_Nido%2C_Palawan%2C_Philippines.jpg'
     ],
     estimatedDailyBudgetPHP: 3800,
     bestTimeToVisit: 'November to May (Dry Season)',
@@ -107,9 +107,10 @@ export const DESTINATIONS: Destination[] = [
     region: 'Luzon',
     tagline: 'Sunken WWII Shipwrecks & Enchanted Kayangan Lake',
     description: 'A diver and nature lover paradise characterized by crystal-clear freshwater lakes nestled in karst mountains, surreal thermoclines, and coral-encrusted Japanese shipwrecks.',
-    heroImage: 'https://images.unsplash.com/photo-1578922746465-3a80a228f223?auto=format&fit=crop&w=1200&q=80',
+    heroImage: 'https://upload.wikimedia.org/wikipedia/commons/4/43/Kayangan_Lake%2C_Coron%2C_Palawan.jpg',
     galleryImages: [
-      'https://images.unsplash.com/photo-1544551763-46a013bb70d5?auto=format&fit=crop&w=800&q=80'
+      'https://upload.wikimedia.org/wikipedia/commons/3/3b/Kayangan_Lake%2C_Coron_Island.jpg',
+      'https://upload.wikimedia.org/wikipedia/commons/c/ca/Coron_Kayangan_Lake_Entrance_%2873005283%29.jpeg'
     ],
     estimatedDailyBudgetPHP: 3400,
     bestTimeToVisit: 'December to May (Calm waters, high underwater visibility)',
@@ -152,9 +153,10 @@ export const DESTINATIONS: Destination[] = [
     region: 'Visayas',
     tagline: 'Kawasan Canyoneering, Sardine Runs & Historic Heart',
     description: 'The queen city of the south blending deep 500-year colonial heritage with adrenaline adventures like Kawasan canyon jumps, million-fish sardine balls, and pristine island escapes.',
-    heroImage: 'https://images.unsplash.com/photo-1533105079780-92b9be482077?auto=format&fit=crop&w=1200&q=80',
+    heroImage: 'https://upload.wikimedia.org/wikipedia/commons/1/1b/Kawasan_Falls_Cebu_Island.jpg',
     galleryImages: [
-      'https://images.unsplash.com/photo-1544551763-46a013bb70d5?auto=format&fit=crop&w=800&q=80'
+      'https://upload.wikimedia.org/wikipedia/commons/1/1e/Kawasan_Falls%2C_Cebu%2C_Philippines1.jpg',
+      'https://upload.wikimedia.org/wikipedia/commons/8/8b/Kawasan_Falls_Cebu.jpg'
     ],
     estimatedDailyBudgetPHP: 2600,
     bestTimeToVisit: 'January to May (Sinulog Festival in 3rd Sunday of January)',
@@ -197,9 +199,10 @@ export const DESTINATIONS: Destination[] = [
     region: 'Luzon',
     tagline: 'The Home of the Winds, Rolling Hills & Ivatan Culture',
     description: 'The northernmost frontier of the Philippines. Marvel at rolling emerald hills meeting tempestuous seas, historic Ivatan stone houses, lighthouses, and legendary zero-crime honesty coffee shops.',
-    heroImage: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1200&q=80',
+    heroImage: 'https://upload.wikimedia.org/wikipedia/commons/e/ef/Basco_Lighthouse%2C_Day_Photo.jpg',
     galleryImages: [
-      'https://images.unsplash.com/photo-1518509562904-e7ef99cdcc86?auto=format&fit=crop&w=800&q=80'
+      'https://upload.wikimedia.org/wikipedia/commons/4/48/Batanes_lighthouse_at_Basco_-_Flickr.jpg',
+      'https://upload.wikimedia.org/wikipedia/commons/thumb/9/97/Sabtang_Batanes.jpg/1280px-Sabtang_Batanes.jpg'
     ],
     estimatedDailyBudgetPHP: 4500,
     bestTimeToVisit: 'December to May (Pleasant cool winds, blooming pasturelands)',
@@ -242,9 +245,10 @@ export const DESTINATIONS: Destination[] = [
     region: 'Visayas',
     tagline: 'World-Renowned 4km White Beach & Sunset Paraw Sailing',
     description: 'Consistently ranked among the world best beaches for its sugar-fine powder white sand, calm shallow waters, world-class nightlife, and iconic sunset Paraw sailboats.',
-    heroImage: 'https://images.unsplash.com/photo-1540206351-d6465b3ac5c1?auto=format&fit=crop&w=1200&q=80',
+    heroImage: 'https://upload.wikimedia.org/wikipedia/commons/5/50/Boracay_White_Beach_in_day_%28985286231%29.jpg',
     galleryImages: [
-      'https://images.unsplash.com/photo-1506929562872-bb421503ef21?auto=format&fit=crop&w=800&q=80'
+      'https://upload.wikimedia.org/wikipedia/commons/3/3e/Boracay_white_beach_in_2014.jpg',
+      'https://upload.wikimedia.org/wikipedia/commons/c/cd/Boracay_White_Beach.png'
     ],
     estimatedDailyBudgetPHP: 3500,
     bestTimeToVisit: 'November to May (Amihan Season with mirror-flat glassy waters)',
@@ -286,9 +290,10 @@ export const DESTINATIONS: Destination[] = [
     region: 'Visayas',
     tagline: 'Chocolate Hills, World’s Smallest Tarsiers & Loboc River',
     description: 'A diverse natural sanctuary featuring over 1,700 conical Chocolate Hills, the world smallest primates, serene emerald river cruises, and vibrant Balicasag sea turtle dives.',
-    heroImage: 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?auto=format&fit=crop&w=1200&q=80',
+    heroImage: 'https://upload.wikimedia.org/wikipedia/commons/9/9b/Chocolate_Hills_-_edit.jpg',
     galleryImages: [
-      'https://images.unsplash.com/photo-1516483638261-f4dbaf036963?auto=format&fit=crop&w=800&q=80'
+      'https://upload.wikimedia.org/wikipedia/commons/2/28/Chocolate_Hills_overview.JPG',
+      'https://upload.wikimedia.org/wikipedia/commons/5/52/Bohol_Hills%2C_Chocolate_Hills_4%2C_Philippines.jpg'
     ],
     estimatedDailyBudgetPHP: 2800,
     bestTimeToVisit: 'December to May (Hills turn chocolate brown during dry March-May)',
@@ -330,9 +335,10 @@ export const DESTINATIONS: Destination[] = [
     region: 'Luzon',
     tagline: 'Hanging Coffins, Sea of Clouds & Ancient Rice Terraces',
     description: 'A serene mountain haven perched high in the Cordilleras. Experience 2,000-year-old UNESCO rice terraces, hanging cliff coffins, mystical cave spelunking, and crisp mountain Arabica coffee.',
-    heroImage: 'https://images.unsplash.com/photo-1506929562872-bb421503ef21?auto=format&fit=crop&w=1200&q=80',
+    heroImage: 'https://upload.wikimedia.org/wikipedia/commons/1/11/Banaue_Philippines_Batad-Rice-Terraces-02.jpg',
     galleryImages: [
-      'https://images.unsplash.com/photo-1518509562904-e7ef99cdcc86?auto=format&fit=crop&w=800&q=80'
+      'https://upload.wikimedia.org/wikipedia/commons/5/50/Banaue_Philippines_Banaue-Rice-Terraces-01.jpg',
+      'https://upload.wikimedia.org/wikipedia/commons/thumb/6/66/Sagada_skyline_%28Sagada%2C_Mountain_Province%3B_12-01-2022%29.jpg/1280px-Sagada_skyline_%28Sagada%2C_Mountain_Province%3B_12-01-2022%29.jpg'
     ],
     estimatedDailyBudgetPHP: 2200,
     bestTimeToVisit: 'November to February (Coolest weather and magical sea of clouds)',
@@ -375,9 +381,10 @@ export const DESTINATIONS: Destination[] = [
     region: 'Visayas',
     tagline: 'The Mystical Island of Fire, Healing & Enchanting Falls',
     description: 'An enchanting island famed for turquoise multi-tiered Cambugahay Falls, cliff jumping at Salagdoong, centuries-old Balete fish spa trees, and peaceful untouched coastal roads.',
-    heroImage: 'https://images.unsplash.com/photo-1518509562904-e7ef99cdcc86?auto=format&fit=crop&w=1200&q=80',
+    heroImage: 'https://upload.wikimedia.org/wikipedia/commons/2/27/Siquijor_-_Cambugahay_Falls.jpg',
     galleryImages: [
-      'https://images.unsplash.com/photo-1533105079780-92b9be482077?auto=format&fit=crop&w=800&q=80'
+      'https://upload.wikimedia.org/wikipedia/commons/d/d3/Cambugahay_falls.jpg',
+      'https://upload.wikimedia.org/wikipedia/commons/3/35/Cambugahay_Falls_01.JPG'
     ],
     estimatedDailyBudgetPHP: 2300,
     bestTimeToVisit: 'November to May (Calm seas & optimal cliff jumping)',
@@ -419,9 +426,10 @@ export const DESTINATIONS: Destination[] = [
     region: 'Luzon',
     tagline: 'UNESCO World Heritage Spanish Colonial Gem',
     description: 'One of the finest preserved Spanish colonial towns in Asia. Stroll cobblestone streets along Calle Crisologo illuminated by antique lanterns, ride traditional kalesas, and savor crispy Ilocos empanadas.',
-    heroImage: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1200&q=80',
+    heroImage: 'https://upload.wikimedia.org/wikipedia/commons/c/cb/Calle_Crisologo%2C_Philippines.jpg',
     galleryImages: [
-      'https://images.unsplash.com/photo-1540206351-d6465b3ac5c1?auto=format&fit=crop&w=800&q=80'
+      'https://upload.wikimedia.org/wikipedia/commons/4/4e/Vigan_heritage_village_Calle_Crisologo-Gen_Luna_calesa_%28Vigan%2C_Ilocos_Sur%3B_11-14-2022%29.jpg',
+      'https://upload.wikimedia.org/wikipedia/commons/6/65/Calle_Crisologo%2C_Vigan_Ilocos_Sur_October%2C_2025.jpg'
     ],
     estimatedDailyBudgetPHP: 2000,
     bestTimeToVisit: 'November to March (Cooler dry climate for leisurely walking tours)',

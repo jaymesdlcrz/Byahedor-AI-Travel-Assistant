@@ -161,8 +161,41 @@ function getFallbackDestinationPlan(destination: string, days: number, travelers
 }
 
 // Helper: Rich local knowledge fallback generator for Philippine travel
-function getFallbackChatResponse(latestUserMessage: string): string {
-  const query = (latestUserMessage || "").toLowerCase();
+function getFallbackChatResponse(latestUserMessage: string, language?: string): string {
+  const query = (latestUserMessage || "").toLowerCase().trim();
+
+  // 1. Casual Greetings & Intro
+  if (/^(hi|hello|hey|kumusta|musta|hoy|uy|yo|good\s*(morning|day|afternoon|evening)|maayong\s*adlaw)[\s!.,?]*$/i.test(query) || query === "hi" || query === "hello") {
+    if (language === 'Bisaya') {
+      return `Maayong adlaw! 🌴 Ako si **Byahedor**, imong Bisaya AI travel guide! Asa man imong plano maglaag karon? 
+
+Pwede ko mutabang nimo sa:
+- 🏝️ **Mga nindot nga isla** (Siargao, Palawan, Cebu, Bantayan, Siquijor)
+- 💰 **Budget ug pletehan** sa barko, eroplano, ug habal-habal
+- 🗺️ **Day-by-day Itinerary** ug lami nga kan-anan!
+
+Unsa may naa sa imong huna-huna?`;
+    }
+    if (language === 'Filipino') {
+      return `Mabuhay! Kumusta kaibigan! 🌴 Ako si **Byahedor**, ang iyong personal AI Philippine travel concierge!
+
+Saan mo gustong mag-byahe next? Matutulungan kita sa:
+- 🏖️ **Itinerary & Day-by-Day Guides** (Siargao, El Nido, Coron, Cebu, Batanes, Bohol)
+- 💰 **Budget at Gastos** sa tricycle, bangka, ferry, at homestays
+- 🍱 **Saan Masarap Kumain** at mga secret spots na hindi crowded!
+
+I-type mo lang ang pupuntahan mo o itanong kahit ano tungkol sa byahe!`;
+    }
+    return `Mabuhay! 🌴 I'm **Byahedor**, your friendly Philippine AI travel concierge!
+
+How can I help you plan your next island adventure?
+- 🏖️ **Custom Itineraries:** Siargao, Palawan, Cebu, Bohol, Batanes, Boracay, Sagada, and 7,640+ islands
+- 💰 **Budget Optimization:** Real itemized costs in ₱ PHP (tricycle fares, fast craft ferries, joiner tours)
+- 🍱 **Culinary Gems:** Authentic local carinderias, seafood boodle fights, and regional dishes
+- 🎒 **Packing & Island Safety:** Ferry schedules, marine park fees, and weather hacks
+
+Which island or city is on your bucket list today?`;
+  }
 
   if (query.includes("siargao") || query.includes("surf") || query.includes("cloud 9")) {
     return `### 🌴 Siargao Island Adventure Guide
@@ -256,7 +289,7 @@ Rent a scooter right at Siquijor or Larena Port for ₱350/day. The circular coa
 #### 💡 Travel Notes:
 - Flights to Basco (BSO) via Philippine Airlines or Cebgo sell out fast; book 3–6 months ahead.
 - Bring a windbreaker and sturdy hiking shoes. Support the Ivatan communities with respect and *Dios Mamajes* (Thank you)!`;
-  } else if (query.includes("budget") || query.includes("cost") || query.includes("gastos") || query.includes("pera") || query.includes("magkano")) {
+  } else if (query.includes("budget") || query.includes("cost") || query.includes("gastos") || query.includes("pera") || query.includes("magkano") || query.includes("tipid")) {
     return `### 💰 Byahedor Practical Budget Optimization Guide
 
 Here is how to travel the Philippines smartly without breaking the bank:
@@ -291,20 +324,82 @@ Tell me which specific province or island you are planning to visit, and I will 
 - **Station 3:** Quiet, backpacker hostels, lush palm trees, and affordable chill bars.
 
 **Activities:** Paraw sunset sailing (₱1,500/boat), helmet diving, and cliff jumping at Ariel's Point!
-
 **Mandatory Requirement:** Pre-book a DOT-accredited hotel before arriving at Caticlan Jetty Port.`;
+  } else if (query.includes("food") || query.includes("kain") || query.includes("eat") || query.includes("restaurant") || query.includes("delicacy") || query.includes("ulam")) {
+    return `### 🍲 Authentic Philippine Foodie Recommendations
+
+The Philippine culinary landscape is regional and diverse:
+1. **Bacolod & Iloilo:** Authentic Chicken Inasal marinated in calamansi and annatto oil, and hot bowls of La Paz Batchoy.
+2. **Cebu:** World-famous crunchy Lechon dipped in vinegar with spicy siling labuyo and hanging rice (*puso*).
+3. **Pampanga (Culinary Capital):** Sizzling pork sisig, bringhe, and authentic kare-kare.
+4. **Bicol:** Fiery Bicol Express and creamy Laing cooked in pure coconut milk and fresh chilies.
+5. **Vigan (Ilocos):** Crisp Vigan empanada with longganisa and egg, Bagnet, and Poqui-poqui.
+
+Which region are you visiting so I can pinpoint the best specific local spots?`;
   }
 
+  // Default warm concierge response
   return `Mabuhay! I am **Byahedor**, your friendly Philippine AI travel concierge! 🇵🇭✈️
 
-I can help you with:
+I can assist you with:
 - 🗺️ **Personalized Itineraries** for 82 Philippine provinces
 - 💰 **Itemized Budget Calculations** in Philippine Peso (₱)
-- 🛵 **Transit Guides** (Jeepney routes, ferries, RORO, habal-habal, flights)
+- 🛵 **Transit Guides** (Jeepney routes, fast craft ferries, RORO, habal-habal, flights)
 - 🍱 **Authentic Foodie Guides** & carinderia hidden gems
 - 🎒 **Tailored Packing Checklists** and local weather advice
 
 Where are you dreaming of traveling next? (e.g., *Siargao, Palawan, Cebu, Batanes, Bohol, Vigan, Siquijor, Davao, Iloilo*) — *Tara, byahe tayo!* 🌴🌊`;
+}
+
+// Helper: Format history into valid Gemini multiturn alternating contents
+function formatGeminiContents(history: any[] | undefined, messages: any[] | undefined, latestMessage: string): any[] {
+  const rawTurns: { role: 'user' | 'model'; text: string }[] = [];
+
+  const sourceList = Array.isArray(history) && history.length > 0 
+    ? history 
+    : (Array.isArray(messages) ? messages : []);
+
+  for (const item of sourceList) {
+    const text = (item.text || item.content || '').trim();
+    if (!text) continue;
+    const role = (item.role === 'model' || item.role === 'assistant' || item.sender === 'ai') ? 'model' : 'user';
+    rawTurns.push({ role, text });
+  }
+
+  const latestTrimmed = (latestMessage || '').trim();
+  if (latestTrimmed) {
+    const lastTurn = rawTurns[rawTurns.length - 1];
+    if (!lastTurn || lastTurn.role !== 'user' || lastTurn.text !== latestTrimmed) {
+      rawTurns.push({ role: 'user', text: latestTrimmed });
+    }
+  }
+
+  // Remove leading 'model' turns as Gemini API requires the conversation to start with 'user'
+  while (rawTurns.length > 0 && rawTurns[0].role === 'model') {
+    rawTurns.shift();
+  }
+
+  if (rawTurns.length === 0) {
+    return [{ role: 'user', parts: [{ text: latestTrimmed || 'Mabuhay Byahedor! What Philippine travel adventures can you recommend?' }] }];
+  }
+
+  // Enforce strict alternation between 'user' and 'model'
+  const alternating: { role: 'user' | 'model'; parts: { text: string }[] }[] = [];
+  for (const turn of rawTurns) {
+    const last = alternating[alternating.length - 1];
+    if (last && last.role === turn.role) {
+      last.parts[0].text += `\n\n${turn.text}`;
+    } else {
+      alternating.push({ role: turn.role, parts: [{ text: turn.text }] });
+    }
+  }
+
+  // Guarantee the last turn is 'user'
+  if (alternating[alternating.length - 1]?.role !== 'user') {
+    alternating.push({ role: 'user', parts: [{ text: latestTrimmed || 'Please advise.' }] });
+  }
+
+  return alternating;
 }
 
 // 1. Chat Endpoint (Supports both streaming SSE and standard JSON)
@@ -313,7 +408,7 @@ app.post("/api/chat", async (req: Request, res: Response) => {
   const isStream = stream === true || req.headers.accept?.includes("text/event-stream") || req.query.stream === "true";
 
   const ai = getAIClient();
-  const currentLang = language || userPreferences?.language || "English/Filipino";
+  const currentLang = language || userPreferences?.language || "English";
   let contextPrompt = `${BYAHEDOR_SYSTEM_INSTRUCTION}
 
 You are responding to the user in their requested dialect or language (${currentLang}).
@@ -335,71 +430,83 @@ Always maintain warm Filipino hospitality (Mabuhay!), share realistic cost estim
     latestUserMessage = last.content || last.text || "";
   }
 
-  const contents: any[] = [];
-  if (Array.isArray(history) && history.length > 0) {
-    for (const h of history) {
-      contents.push({
-        role: h.role === "assistant" || h.role === "model" ? "model" : "user",
-        parts: [{ text: h.text || h.content || "" }]
-      });
-    }
-  } else if (Array.isArray(messages) && messages.length > 1) {
-    for (const m of messages.slice(0, -1)) {
-      contents.push({
-        role: m.role === "assistant" || m.sender === "ai" ? "model" : "user",
-        parts: [{ text: m.content || m.text || "" }]
-      });
-    }
-  }
+  // Sanitize and format history into valid Gemini alternating multiturn contents
+  const contents = formatGeminiContents(history, messages, latestUserMessage);
 
-  contents.push({
-    role: "user",
-    parts: [{ text: latestUserMessage || "Hello Byahedor! What Philippine travel adventures can you recommend?" }]
-  });
+  // Helper for model stream with fallback
+  const tryStreamWithModel = async (modelName: string) => {
+    if (!ai) return null;
+    return await ai.models.generateContentStream({
+      model: modelName,
+      contents: contents,
+      config: {
+        systemInstruction: contextPrompt,
+        temperature: 0.7,
+      },
+    });
+  };
+
+  // Helper for model non-stream with fallback
+  const tryGenerateWithModel = async (modelName: string) => {
+    if (!ai) return null;
+    return await ai.models.generateContent({
+      model: modelName,
+      contents: contents,
+      config: {
+        systemInstruction: contextPrompt,
+        temperature: 0.75,
+      },
+    });
+  };
 
   // Handle Server-Sent Events (SSE) Streaming
   if (isStream) {
-    res.setHeader("Content-Type", "text/event-stream");
-    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Content-Type", "text/event-stream; charset=utf-8");
+    res.setHeader("Cache-Control", "no-cache, no-transform");
     res.setHeader("Connection", "keep-alive");
+    res.setHeader("X-Accel-Buffering", "no");
     if (typeof (res as any).flushHeaders === "function") {
       (res as any).flushHeaders();
     }
 
     const sendChunk = (data: { text?: string; done?: boolean }) => {
       res.write(`data: ${JSON.stringify(data)}\n\n`);
+      if (typeof (res as any).flush === "function") {
+        (res as any).flush();
+      }
     };
 
     if (ai) {
       try {
-        const streamResponse = await ai.models.generateContentStream({
-          model: "gemini-3.8-flash",
-          contents: contents,
-          config: {
-            systemInstruction: contextPrompt,
-            temperature: 0.75,
-          },
-        });
-
-        for await (const chunk of streamResponse) {
-          if (chunk.text) {
-            sendChunk({ text: chunk.text, done: false });
-          }
+        let streamResponse: any = null;
+        try {
+          streamResponse = await tryStreamWithModel("gemini-3.8-flash");
+        } catch (e1) {
+          console.warn("Retrying with gemini-2.5-flash fallback:", e1);
+          streamResponse = await tryStreamWithModel("gemini-2.5-flash");
         }
-        sendChunk({ done: true });
-        return res.end();
+
+        if (streamResponse) {
+          for await (const chunk of streamResponse) {
+            if (chunk.text) {
+              sendChunk({ text: chunk.text, done: false });
+            }
+          }
+          sendChunk({ done: true });
+          return res.end();
+        }
       } catch (geminiError) {
-        console.warn("Gemini stream error, falling back to rich knowledge engine:", geminiError);
+        console.warn("Gemini stream error, using rich knowledge engine:", geminiError);
       }
     }
 
     // Stream fallback tokens smoothly for instant responsive feedback
-    const fallbackText = getFallbackChatResponse(latestUserMessage);
+    const fallbackText = getFallbackChatResponse(latestUserMessage, currentLang);
     const tokens = fallbackText.match(/\S+\s*|\n+/g) || [fallbackText];
     for (const token of tokens) {
       sendChunk({ text: token, done: false });
-      // Short delay between tokens for natural responsive typing experience
-      await new Promise(r => setTimeout(r, 12));
+      // 8ms delay between tokens for instantaneous, real-time typing sensation
+      await new Promise(r => setTimeout(r, 8));
     }
     sendChunk({ done: true });
     return res.end();
@@ -408,16 +515,14 @@ Always maintain warm Filipino hospitality (Mabuhay!), share realistic cost estim
   // Handle Standard Non-Streaming JSON
   if (ai) {
     try {
-      const response = await ai.models.generateContent({
-        model: "gemini-3.8-flash",
-        contents: contents,
-        config: {
-          systemInstruction: contextPrompt,
-          temperature: 0.75,
-        },
-      });
+      let response: any = null;
+      try {
+        response = await tryGenerateWithModel("gemini-3.8-flash");
+      } catch (e1) {
+        response = await tryGenerateWithModel("gemini-2.5-flash");
+      }
 
-      if (response.text && response.text.trim()) {
+      if (response && response.text && response.text.trim()) {
         return res.json({
           reply: response.text,
           text: response.text,
@@ -429,7 +534,7 @@ Always maintain warm Filipino hospitality (Mabuhay!), share realistic cost estim
     }
   }
 
-  const fallbackText = getFallbackChatResponse(latestUserMessage);
+  const fallbackText = getFallbackChatResponse(latestUserMessage, currentLang);
   return res.json({
     reply: fallbackText,
     text: fallbackText,

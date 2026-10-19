@@ -29,6 +29,7 @@ interface MobileNavProps {
   darkMode: boolean;
   onToggleDarkMode: () => void;
   onShowLoginScreen?: () => void;
+  isKeyboardOpen?: boolean;
 }
 
 export const MobileNav: React.FC<MobileNavProps> = ({
@@ -38,6 +39,7 @@ export const MobileNav: React.FC<MobileNavProps> = ({
   darkMode,
   onToggleDarkMode,
   onShowLoginScreen,
+  isKeyboardOpen = false,
 }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const { currentUser, logout, openAuthModal } = useAuth();
@@ -314,7 +316,11 @@ export const MobileNav: React.FC<MobileNavProps> = ({
       {/* Universal Fixed Bottom Navigation Bar */}
       <nav 
         id="mobile-bottom-nav"
-        className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-[#0f233a]/95 backdrop-blur-md border-t border-[#E4E9F0] dark:border-slate-800 px-2 sm:px-4 py-1 pb-safe flex items-center justify-around shadow-lg transition-colors"
+        className={`lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-[#0f233a]/95 backdrop-blur-md border-t border-[#E4E9F0] dark:border-slate-800 px-2 sm:px-4 py-1 pb-safe flex items-center justify-around shadow-lg transition-all duration-200 ${
+          isKeyboardOpen && currentView === 'chat'
+            ? 'translate-y-full opacity-0 pointer-events-none'
+            : 'translate-y-0 opacity-100'
+        }`}
       >
         {mainBottomTabs.map((tab) => {
           const Icon = tab.icon;

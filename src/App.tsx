@@ -107,6 +107,20 @@ export default function App() {
     }
   }, [currentUser]);
 
+  // Virtual keyboard detection for mobile viewports
+  const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.visualViewport) return;
+    const handleViewport = () => {
+      if (window.visualViewport) {
+        const diff = window.innerHeight - window.visualViewport.height;
+        setIsKeyboardOpen(diff > 120);
+      }
+    };
+    window.visualViewport.addEventListener('resize', handleViewport);
+    return () => window.visualViewport?.removeEventListener('resize', handleViewport);
+  }, []);
+
   // Saved trips state with local persistence
   const [savedTrips, setSavedTrips] = useState<TripPlan[]>(() => {
     const saved = localStorage.getItem('byahedor_saved_trips');
@@ -392,7 +406,11 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen min-h-dvh bg-[#F5FAFC] dark:bg-[#09182a] text-[#102A43] dark:text-slate-100 flex flex-col lg:flex-row transition-colors font-sans antialiased selection:bg-[#087EA4] selection:text-white w-full overflow-x-hidden">
+    <div className={`bg-[#F5FAFC] dark:bg-[#09182a] text-[#102A43] dark:text-slate-100 flex flex-col lg:flex-row transition-colors font-sans antialiased selection:bg-[#087EA4] selection:text-white w-full ${
+      currentView === 'chat'
+        ? 'h-[100dvh] max-h-[100dvh] overflow-hidden'
+        : 'min-h-screen min-h-dvh overflow-x-hidden'
+    }`}>
       {/* Desktop Sidebar */}
       <Sidebar
         currentView={currentView}
@@ -404,7 +422,9 @@ export default function App() {
       />
 
       {/* Main Dynamic Content Area */}
-      <div className="flex-1 flex flex-col min-w-0 w-full overflow-x-hidden">
+      <div className={`flex-1 flex flex-col min-w-0 w-full ${
+        currentView === 'chat' ? 'h-full overflow-hidden' : 'overflow-x-hidden'
+      }`}>
         {/* Mobile Header & Bottom Navigation */}
         <MobileNav
           currentView={currentView}
@@ -413,10 +433,17 @@ export default function App() {
           darkMode={darkMode}
           onToggleDarkMode={handleToggleDarkMode}
           onShowLoginScreen={() => setGuestSession(false)}
+          isKeyboardOpen={isKeyboardOpen}
         />
 
         {/* View Viewport with bottom safe area for mobile navigation */}
-        <main className="flex-1 p-3 sm:p-4.5 md:p-6 pb-24 sm:pb-28 lg:pb-8 max-w-6xl w-full mx-auto">
+        <main className={
+          currentView === 'chat'
+            ? `flex-1 min-h-0 flex flex-col w-full h-full p-0 sm:p-2 md:p-4 max-w-4xl mx-auto overflow-hidden ${
+                isKeyboardOpen ? 'pb-1' : 'pb-[56px] sm:pb-[60px] lg:pb-0'
+              }`
+            : "flex-1 p-3 sm:p-4.5 md:p-6 pb-24 sm:pb-28 lg:pb-8 max-w-6xl w-full mx-auto"
+        }>
           {currentView === 'home' && (
             <HomeDashboard
               onNavigate={handleNavigate}
