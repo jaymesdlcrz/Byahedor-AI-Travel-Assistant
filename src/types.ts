@@ -125,3 +125,13 @@ export interface UserPreferences {
   travelPace?: 'relaxed' | 'balanced' | 'fast-paced';
   themeMode?: 'light' | 'dark' | 'system';
 }
+
+export interface AuthUser {
+  uid: string;
+  email: string | null;
+  displayName: string | null;
+  photoURL: string | null;
+  emailVerified?: boolean;
+  isAnonymous?: boolean;
+  providerId?: string;
+}

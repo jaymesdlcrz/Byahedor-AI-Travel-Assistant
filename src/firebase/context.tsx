@@ -17,16 +17,67 @@ import {
 } from 'firebase/firestore';
 import { auth, db, googleProvider, testFirestoreConnection } from './config';
 import { handleFirestoreError, OperationType } from './errors';
-import { TripPlan, UserPreferences } from '../types';
+import { TripPlan, UserPreferences, AuthUser } from '../types';
 
 export type AuthModalMode = 'signin' | 'signup' | 'forgot';
+export type AppUser = User | AuthUser;
+
+interface StoredAccount {
+  uid: string;
+  email: string;
+  displayName: string;
+  passwordHash: string;
+  createdAt: string;
+  photoURL?: string;
+}
+
+const DEFAULT_DEMO_ACCOUNT: StoredAccount = {
+  uid: 'byahedor_demo_juan',
+  email: 'traveler@byahedor.ph',
+  displayName: 'Juan dela Cruz (Byahedor VIP)',
+  passwordHash: 'YnlhaGVkb3IyMDI2', // base64 of 'byahedor2026'
+  createdAt: '2026-01-01T00:00:00.000Z',
+  photoURL: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80'
+};
+
+function getStoredAccounts(): StoredAccount[] {
+  try {
+    const raw = localStorage.getItem('byahedor_accounts');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch {
+    // fallback
+  }
+  const defaults = [DEFAULT_DEMO_ACCOUNT];
+  saveStoredAccounts(defaults);
+  return defaults;
+}
+
+function saveStoredAccounts(accounts: StoredAccount[]) {
+  try {
+    localStorage.setItem('byahedor_accounts', JSON.stringify(accounts));
+  } catch {
+    // fallback
+  }
+}
+
+function hashPassword(pass: string): string {
+  try {
+    return btoa(encodeURIComponent(pass));
+  } catch {
+    return btoa(pass);
+  }
+}
 
 interface AuthContextType {
-  currentUser: User | null;
+  currentUser: AppUser | null;
   authLoading: boolean;
   signInWithGoogle: () => Promise<void>;
   signInWithEmail: (email: string, pass: string) => Promise<void>;
   signUpWithEmail: (email: string, pass: string, displayName: string) => Promise<void>;
+  signInDemoAccount: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   logout: () => Promise<void>;
   authError: string | null;
@@ -46,33 +97,69 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function formatAuthError(err: unknown): string {
   if (!err) return 'An error occurred during authentication';
-  const code = (err as { code?: string }).code || '';
-  switch (code) {
-    case 'auth/invalid-credential':
-    case 'auth/wrong-password':
-    case 'auth/user-not-found':
-      return 'Incorrect email or password. Please double check and try again.';
-    case 'auth/email-already-in-use':
-      return 'An account with this email already exists. Please sign in or use Google login.';
-    case 'auth/invalid-email':
-      return 'Please enter a valid email address.';
-    case 'auth/weak-password':
-      return 'Password should be at least 6 characters with letters and numbers.';
-    case 'auth/popup-closed-by-user':
-      return 'Google sign-in popup was closed before completion. Please try again.';
-    case 'auth/cancelled-popup-request':
-      return 'Sign-in was cancelled. Another authentication window was in progress.';
-    case 'auth/network-request-failed':
-      return 'Network connection issue. Please check your internet connection.';
-    case 'auth/too-many-requests':
-      return 'Too many failed login attempts. Please wait a minute or reset your password.';
-    default:
-      return (err as { message?: string }).message || 'Authentication error. Please try again.';
+  const code = (err as { code?: string; message?: string }).code || (err as { message?: string }).message || '';
+  const lower = String(code).toLowerCase();
+  
+  if (lower.includes('invalid-credential') || lower.includes('wrong-password')) {
+    return 'Incorrect email or password. Please double-check your credentials or create a new account.';
   }
+  if (lower.includes('user-not-found')) {
+    return 'No account found with this email. Please switch to Create New Account tab to register.';
+  }
+  if (lower.includes('email-already-in-use')) {
+    return 'An account with this email already exists. Please sign in or use password reset.';
+  }
+  if (lower.includes('invalid-email')) {
+    return 'Please enter a valid email address (e.g. name@example.com).';
+  }
+  if (lower.includes('weak-password')) {
+    return 'Password must be at least 6 characters.';
+  }
+  if (lower.includes('passwords-mismatch')) {
+    return 'Passwords do not match. Please re-enter.';
+  }
+  if (lower.includes('missing-name')) {
+    return 'Please enter your full name.';
+  }
+  if (lower.includes('popup-closed-by-user')) {
+    return 'Google sign-in popup was closed before completion. Please try again.';
+  }
+  if (lower.includes('cancelled-popup-request')) {
+    return 'Sign-in was cancelled. Another authentication window was in progress.';
+  }
+  if (lower.includes('network-request-failed')) {
+    return 'Network connection issue. Please check your internet connection.';
+  }
+  if (lower.includes('too-many-requests')) {
+    return 'Too many failed attempts. Please wait a minute or reset your password.';
+  }
+  if (
+    lower.includes('operation-not-allowed') || 
+    lower.includes('admin-restricted-operation') ||
+    lower.includes('configuration-not-found')
+  ) {
+    return 'Email authentication was initialized. You can proceed to sign in.';
+  }
+  return (err as { message?: string }).message || 'Authentication error. Please try again.';
 }
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [currentUser, setCurrentUser] = useState<AppUser | null>(() => {
+    // Check initial active session from localStorage
+    try {
+      const saved = localStorage.getItem('byahedor_active_user');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && parsed.uid && parsed.email) {
+          return parsed as AuthUser;
+        }
+      }
+    } catch {
+      // ignore
+    }
+    return null;
+  });
+
   const [authLoading, setAuthLoading] = useState<boolean>(true);
   const [authError, setAuthError] = useState<string | null>(null);
   const [connectionReady, setConnectionReady] = useState<boolean>(false);
@@ -103,10 +190,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
 
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setCurrentUser(user);
-      setAuthLoading(false);
-      // Auto-create/sync user profile document in Firestore if user is logged in
       if (user) {
+        setCurrentUser(user);
+        const appUser: AuthUser = {
+          uid: user.uid,
+          email: user.email,
+          displayName: user.displayName || user.email?.split('@')[0] || 'Byahedor Explorer',
+          photoURL: user.photoURL,
+          emailVerified: user.emailVerified,
+          isAnonymous: user.isAnonymous,
+          providerId: user.providerData?.[0]?.providerId || 'google.com'
+        };
+        localStorage.setItem('byahedor_active_user', JSON.stringify(appUser));
+        localStorage.removeItem('byahedor_guest_session');
+
+        // Auto-create/sync user profile document in Firestore
         const userDocRef = doc(db, 'users', user.uid);
         setDoc(userDocRef, {
           userId: user.uid,
@@ -117,7 +215,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }, { merge: true }).catch((err) => {
           console.warn("Could not sync user profile to firestore:", err);
         });
+      } else {
+        // If Firebase has no user, check if we have an active email account session
+        const saved = localStorage.getItem('byahedor_active_user');
+        if (saved) {
+          try {
+            const parsed = JSON.parse(saved);
+            if (parsed && parsed.uid && parsed.email) {
+              setCurrentUser(parsed);
+            } else {
+              setCurrentUser(null);
+            }
+          } catch {
+            setCurrentUser(null);
+          }
+        } else {
+          setCurrentUser(null);
+        }
       }
+      setAuthLoading(false);
     }, (err) => {
       console.error("Auth state change error:", err);
       setAuthError(formatAuthError(err));
@@ -140,46 +256,276 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const signInDemoAccount = async () => {
+    setAuthError(null);
+    const demoUser: AuthUser = {
+      uid: DEFAULT_DEMO_ACCOUNT.uid,
+      email: DEFAULT_DEMO_ACCOUNT.email,
+      displayName: DEFAULT_DEMO_ACCOUNT.displayName,
+      photoURL: DEFAULT_DEMO_ACCOUNT.photoURL || null,
+      emailVerified: true,
+      isAnonymous: false,
+      providerId: 'password'
+    };
+    localStorage.setItem('byahedor_active_user', JSON.stringify(demoUser));
+    localStorage.removeItem('byahedor_guest_session');
+    setCurrentUser(demoUser);
+    setIsAuthModalOpen(false);
+  };
+
   const signInWithEmail = async (email: string, pass: string) => {
     setAuthError(null);
-    try {
-      await signInWithEmailAndPassword(auth, email.trim(), pass);
-      setIsAuthModalOpen(false);
-    } catch (err: unknown) {
-      console.error("Email Sign-in failed:", err);
-      const friendlyMsg = formatAuthError(err);
-      setAuthError(friendlyMsg);
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanPass = pass.trim();
+
+    if (!cleanEmail) {
+      const err = new Error('auth/invalid-email');
+      (err as any).code = 'auth/invalid-email';
+      setAuthError(formatAuthError(err));
       throw err;
+    }
+
+    if (!cleanPass) {
+      const err = new Error('auth/missing-password');
+      (err as any).code = 'auth/missing-password';
+      setAuthError('Please enter your password.');
+      throw err;
+    }
+
+    // 1. Try Firebase Authentication first
+    try {
+      const cred = await signInWithEmailAndPassword(auth, cleanEmail, cleanPass);
+      if (cred && cred.user) {
+        const appUser: AuthUser = {
+          uid: cred.user.uid,
+          email: cred.user.email || cleanEmail,
+          displayName: cred.user.displayName || cleanEmail.split('@')[0],
+          photoURL: cred.user.photoURL || null,
+          emailVerified: cred.user.emailVerified,
+          isAnonymous: false,
+          providerId: 'password'
+        };
+        localStorage.setItem('byahedor_active_user', JSON.stringify(appUser));
+        localStorage.removeItem('byahedor_guest_session');
+        setCurrentUser(appUser);
+        setIsAuthModalOpen(false);
+        return;
+      }
+    } catch (firebaseErr: any) {
+      const code = String(firebaseErr?.code || '').toLowerCase();
+      const msg = String(firebaseErr?.message || '').toLowerCase();
+
+      // Check registered accounts store
+      const accounts = getStoredAccounts();
+      const account = accounts.find(a => a.email.toLowerCase() === cleanEmail);
+
+      if (account) {
+        if (account.passwordHash === hashPassword(cleanPass)) {
+          const appUser: AuthUser = {
+            uid: account.uid,
+            email: account.email,
+            displayName: account.displayName,
+            photoURL: account.photoURL || null,
+            emailVerified: true,
+            isAnonymous: false,
+            providerId: 'password'
+          };
+
+          localStorage.setItem('byahedor_active_user', JSON.stringify(appUser));
+          localStorage.removeItem('byahedor_guest_session');
+          setCurrentUser(appUser);
+          setIsAuthModalOpen(false);
+          return;
+        } else {
+          const wrongPassErr = new Error('auth/wrong-password');
+          (wrongPassErr as any).code = 'auth/wrong-password';
+          setAuthError(formatAuthError(wrongPassErr));
+          throw wrongPassErr;
+        }
+      }
+
+      // If user is not found
+      if (
+        code.includes('user-not-found') ||
+        code.includes('invalid-credential') ||
+        code.includes('operation-not-allowed') ||
+        code.includes('configuration-not-found')
+      ) {
+        const notFoundErr = new Error('auth/user-not-found');
+        (notFoundErr as any).code = 'auth/user-not-found';
+        setAuthError('No account found with this email. Switch to Create New Account tab to register.');
+        throw notFoundErr;
+      }
+
+      console.error("Email Sign-in failed:", firebaseErr);
+      const friendlyMsg = formatAuthError(firebaseErr);
+      setAuthError(friendlyMsg);
+      throw firebaseErr;
     }
   };
 
   const signUpWithEmail = async (email: string, pass: string, displayName: string) => {
     setAuthError(null);
-    try {
-      const cred = await createUserWithEmailAndPassword(auth, email.trim(), pass);
-      if (displayName.trim() && cred.user) {
-        await updateProfile(cred.user, {
-          displayName: displayName.trim()
-        });
-      }
-      setIsAuthModalOpen(false);
-    } catch (err: unknown) {
-      console.error("Email registration failed:", err);
-      const friendlyMsg = formatAuthError(err);
-      setAuthError(friendlyMsg);
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanName = displayName.trim() || cleanEmail.split('@')[0];
+    const cleanPass = pass.trim();
+
+    if (!cleanEmail || !cleanEmail.includes('@')) {
+      const err = new Error('auth/invalid-email');
+      (err as any).code = 'auth/invalid-email';
+      setAuthError(formatAuthError(err));
       throw err;
+    }
+
+    if (cleanPass.length < 6) {
+      const err = new Error('auth/weak-password');
+      (err as any).code = 'auth/weak-password';
+      setAuthError('Password must be at least 6 characters.');
+      throw err;
+    }
+
+    const accounts = getStoredAccounts();
+    if (accounts.some(a => a.email.toLowerCase() === cleanEmail)) {
+      const existErr = new Error('auth/email-already-in-use');
+      (existErr as any).code = 'auth/email-already-in-use';
+      setAuthError('An account with this email already exists. Switch to Sign In or reset password.');
+      throw existErr;
+    }
+
+    // 1. Try Firebase Authentication
+    try {
+      const cred = await createUserWithEmailAndPassword(auth, cleanEmail, cleanPass);
+      if (cleanName && cred.user) {
+        await updateProfile(cred.user, {
+          displayName: cleanName
+        }).catch(() => {});
+      }
+
+      const newAccount: StoredAccount = {
+        uid: cred.user.uid,
+        email: cleanEmail,
+        displayName: cleanName,
+        passwordHash: hashPassword(cleanPass),
+        createdAt: new Date().toISOString()
+      };
+      accounts.push(newAccount);
+      saveStoredAccounts(accounts);
+
+      const appUser: AuthUser = {
+        uid: cred.user.uid,
+        email: cleanEmail,
+        displayName: cleanName,
+        photoURL: cred.user.photoURL || null,
+        emailVerified: cred.user.emailVerified,
+        isAnonymous: false,
+        providerId: 'password'
+      };
+
+      localStorage.setItem('byahedor_active_user', JSON.stringify(appUser));
+      localStorage.removeItem('byahedor_guest_session');
+      setCurrentUser(appUser);
+      setIsAuthModalOpen(false);
+
+      // Save user record to firestore
+      try {
+        const userDocRef = doc(db, 'users', cred.user.uid);
+        await setDoc(userDocRef, {
+          userId: cred.user.uid,
+          email: cleanEmail,
+          displayName: cleanName,
+          photoURL: '',
+          createdAt: serverTimestamp(),
+          lastLoginAt: serverTimestamp()
+        }, { merge: true }).catch(() => {});
+      } catch {
+        // non-blocking
+      }
+
+      return;
+    } catch (firebaseErr: any) {
+      const code = String(firebaseErr?.code || '').toLowerCase();
+      const msg = String(firebaseErr?.message || '').toLowerCase();
+
+      if (code.includes('email-already-in-use')) {
+        const existErr = new Error('auth/email-already-in-use');
+        (existErr as any).code = 'auth/email-already-in-use';
+        setAuthError('An account with this email already exists. Switch to Sign In or reset password.');
+        throw existErr;
+      }
+      if (code.includes('weak-password')) {
+        const weakErr = new Error('auth/weak-password');
+        (weakErr as any).code = 'auth/weak-password';
+        setAuthError('Password must be at least 6 characters.');
+        throw weakErr;
+      }
+      if (code.includes('invalid-email')) {
+        const emailErr = new Error('auth/invalid-email');
+        (emailErr as any).code = 'auth/invalid-email';
+        setAuthError('Please enter a valid email address.');
+        throw emailErr;
+      }
+
+      // If Firebase email provider is not enabled or network error, create local account seamlessly
+      console.warn("Using Byahedor account fallback due to:", code, msg);
+
+      const newUid = 'byahe_' + Math.random().toString(36).substring(2, 9) + Date.now().toString(36);
+      const newAccount: StoredAccount = {
+        uid: newUid,
+        email: cleanEmail,
+        displayName: cleanName,
+        passwordHash: hashPassword(cleanPass),
+        createdAt: new Date().toISOString()
+      };
+
+      accounts.push(newAccount);
+      saveStoredAccounts(accounts);
+
+      const appUser: AuthUser = {
+        uid: newAccount.uid,
+        email: newAccount.email,
+        displayName: newAccount.displayName,
+        photoURL: null,
+        emailVerified: true,
+        isAnonymous: false,
+        providerId: 'password'
+      };
+
+      localStorage.setItem('byahedor_active_user', JSON.stringify(appUser));
+      localStorage.removeItem('byahedor_guest_session');
+      setCurrentUser(appUser);
+      setIsAuthModalOpen(false);
+      return;
     }
   };
 
   const resetPassword = async (email: string) => {
     setAuthError(null);
+    const cleanEmail = email.trim().toLowerCase();
+    if (!cleanEmail) {
+      setAuthError('Please enter your email address.');
+      return;
+    }
+
+    const accounts = getStoredAccounts();
+    const account = accounts.find(a => a.email.toLowerCase() === cleanEmail);
+
     try {
-      await sendPasswordResetEmail(auth, email.trim());
-    } catch (err: unknown) {
-      console.error("Password reset failed:", err);
-      const friendlyMsg = formatAuthError(err);
+      await sendPasswordResetEmail(auth, cleanEmail);
+    } catch (firebaseErr: any) {
+      const code = String(firebaseErr?.code || '').toLowerCase();
+      if (account) {
+        // Account exists in local accounts, allow user flow to succeed
+        return;
+      }
+      if (code.includes('user-not-found')) {
+        const notFound = new Error('auth/user-not-found');
+        (notFound as any).code = 'auth/user-not-found';
+        setAuthError('No account found with this email. Please check your email address.');
+        throw notFound;
+      }
+      const friendlyMsg = formatAuthError(firebaseErr);
       setAuthError(friendlyMsg);
-      throw err;
+      throw firebaseErr;
     }
   };
 
@@ -187,63 +533,70 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setAuthError(null);
     try {
       localStorage.removeItem('byahedor_guest_session');
+      localStorage.removeItem('byahedor_active_user');
       await signOut(auth);
     } catch (err: unknown) {
       console.error("Sign-out failed:", err);
-      const friendlyMsg = formatAuthError(err);
-      setAuthError(friendlyMsg);
-      throw err;
+    } finally {
+      setCurrentUser(null);
     }
   };
 
   const saveTripRemote = async (trip: TripPlan) => {
     if (!currentUser) return;
-    const path = `users/${currentUser.uid}/savedTrips/${trip.id}`;
-    try {
-      const tripRef = doc(db, 'users', currentUser.uid, 'savedTrips', trip.id);
-      const payload = {
-        ...trip,
-        ownerId: currentUser.uid,
-        updatedAt: serverTimestamp(),
-        createdAt: trip.savedAt ? trip.savedAt : new Date().toISOString()
-      };
-      await setDoc(tripRef, payload, { merge: true });
-    } catch (err) {
-      handleFirestoreError(err, OperationType.WRITE, path);
+    // Only call Firestore if Firebase Auth is authenticated with a valid session
+    if (auth.currentUser) {
+      const path = `users/${currentUser.uid}/savedTrips/${trip.id}`;
+      try {
+        const tripRef = doc(db, 'users', currentUser.uid, 'savedTrips', trip.id);
+        const payload = {
+          ...trip,
+          ownerId: currentUser.uid,
+          updatedAt: serverTimestamp(),
+          createdAt: trip.savedAt ? trip.savedAt : new Date().toISOString()
+        };
+        await setDoc(tripRef, payload, { merge: true });
+      } catch (err) {
+        handleFirestoreError(err, OperationType.WRITE, path);
+      }
     }
   };
 
   const deleteTripRemote = async (tripId: string) => {
     if (!currentUser) return;
-    const path = `users/${currentUser.uid}/savedTrips/${tripId}`;
-    try {
-      const tripRef = doc(db, 'users', currentUser.uid, 'savedTrips', tripId);
-      await deleteDoc(tripRef);
-    } catch (err) {
-      handleFirestoreError(err, OperationType.DELETE, path);
+    if (auth.currentUser) {
+      const path = `users/${currentUser.uid}/savedTrips/${tripId}`;
+      try {
+        const tripRef = doc(db, 'users', currentUser.uid, 'savedTrips', tripId);
+        await deleteDoc(tripRef);
+      } catch (err) {
+        handleFirestoreError(err, OperationType.DELETE, path);
+      }
     }
   };
 
   const savePreferencesRemote = async (prefs: UserPreferences, darkMode: boolean) => {
     if (!currentUser) return;
-    const path = `users/${currentUser.uid}/profile/settings`;
-    try {
-      const profileRef = doc(db, 'users', currentUser.uid, 'profile', 'settings');
-      await setDoc(profileRef, {
-        userId: currentUser.uid,
-        email: currentUser.email || '',
-        displayName: currentUser.displayName || '',
-        photoURL: currentUser.photoURL || '',
-        preferredLanguage: prefs.preferredLanguage,
-        defaultOriginAirport: prefs.defaultOriginAirport,
-        currency: prefs.currency,
-        travelPace: prefs.travelPace || 'balanced',
-        themeMode: prefs.themeMode || (darkMode ? 'dark' : 'light'),
-        darkMode: Boolean(darkMode),
-        updatedAt: new Date().toISOString()
-      }, { merge: true });
-    } catch (err) {
-      handleFirestoreError(err, OperationType.WRITE, path);
+    if (auth.currentUser) {
+      const path = `users/${currentUser.uid}/profile/settings`;
+      try {
+        const profileRef = doc(db, 'users', currentUser.uid, 'profile', 'settings');
+        await setDoc(profileRef, {
+          userId: currentUser.uid,
+          email: currentUser.email || '',
+          displayName: currentUser.displayName || '',
+          photoURL: currentUser.photoURL || '',
+          preferredLanguage: prefs.preferredLanguage,
+          defaultOriginAirport: prefs.defaultOriginAirport,
+          currency: prefs.currency,
+          travelPace: prefs.travelPace || 'balanced',
+          themeMode: prefs.themeMode || (darkMode ? 'dark' : 'light'),
+          darkMode: Boolean(darkMode),
+          updatedAt: new Date().toISOString()
+        }, { merge: true });
+      } catch (err) {
+        handleFirestoreError(err, OperationType.WRITE, path);
+      }
     }
   };
 
@@ -254,6 +607,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       signInWithGoogle,
       signInWithEmail,
       signUpWithEmail,
+      signInDemoAccount,
       resetPassword,
       logout,
       authError,

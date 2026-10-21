@@ -11,24 +11,117 @@ const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
 app.use(express.json());
 
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error(`Operation timed out after ${timeoutMs}ms`)), timeoutMs)
+    )
+  ]);
+}
+
+const PRIMARY_AI_MODEL = "gemini-3.5-flash-lite";
+const SECONDARY_AI_MODEL = "gemini-3.1-flash-lite";
+const TERTIARY_AI_MODEL = "gemini-3.5-flash";
+
 let aiClient: GoogleGenAI | null = null;
 function getAIClient(): GoogleGenAI | null {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
+  const apiKey = (process.env.GEMINI_API_KEY || "").trim();
+  if (!apiKey || apiKey === "MY_GEMINI_API_KEY") {
     return null;
   }
   if (!aiClient) {
-    aiClient = new GoogleGenAI({ 
-      apiKey,
-      httpOptions: {
-        headers: {
-          'User-Agent': 'aistudio-build'
+    try {
+      aiClient = new GoogleGenAI({ 
+        apiKey,
+        httpOptions: {
+          headers: {
+            'User-Agent': 'aistudio-build'
+          }
         }
-      }
-    });
+      });
+    } catch (e) {
+      console.warn("Failed to initialize GoogleGenAI client:", e);
+      return null;
+    }
   }
   return aiClient;
 }
+
+// Resilient multi-model Gemini execution helper with timeout protection
+async function generateGeminiContentWithFallback(ai: GoogleGenAI, options: {
+  contents: any;
+  systemInstruction?: string;
+  responseMimeType?: string;
+  temperature?: number;
+  timeoutMs?: number;
+}): Promise<{ text: string; model: string } | null> {
+  const models = [PRIMARY_AI_MODEL, SECONDARY_AI_MODEL, TERTIARY_AI_MODEL];
+  const timeoutMs = options.timeoutMs || 10000;
+
+  for (const model of models) {
+    try {
+      const result = await Promise.race([
+        ai.models.generateContent({
+          model,
+          contents: options.contents,
+          config: {
+            systemInstruction: options.systemInstruction,
+            responseMimeType: options.responseMimeType,
+            temperature: options.temperature ?? 0.7,
+          }
+        }),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error(`Timeout with model ${model}`)), timeoutMs)
+        )
+      ]);
+
+      if (result && result.text && result.text.trim()) {
+        return { text: result.text.trim(), model };
+      }
+    } catch (err: any) {
+      console.warn(`[Gemini generateContent] Model ${model} failed:`, err?.message || err);
+    }
+  }
+  return null;
+}
+
+// Resilient multi-model streaming helper
+async function streamGeminiContentWithFallback(ai: GoogleGenAI, options: {
+  contents: any;
+  systemInstruction?: string;
+  temperature?: number;
+  timeoutMs?: number;
+}): Promise<{ stream: any; model: string } | null> {
+  const models = [PRIMARY_AI_MODEL, SECONDARY_AI_MODEL];
+  const timeoutMs = options.timeoutMs || 8000;
+
+  for (const model of models) {
+    try {
+      const streamPromise = ai.models.generateContentStream({
+        model,
+        contents: options.contents,
+        config: {
+          systemInstruction: options.systemInstruction,
+          temperature: options.temperature ?? 0.7,
+        }
+      });
+
+      const stream = await Promise.race([
+        streamPromise,
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error(`Stream connection timeout with model ${model}`)), timeoutMs)
+        )
+      ]);
+
+      return { stream, model };
+    } catch (err: any) {
+      console.warn(`[Gemini Stream] Model ${model} failed:`, err?.message || err);
+    }
+  }
+  return null;
+}
+
 
 const BYAHEDOR_SYSTEM_INSTRUCTION = `You are "Byahedor" (meaning traveler/commuter in Filipino), a warm, ultra-knowledgeable, and encouraging Filipino AI Travel Companion & Trip Assistant.
 
@@ -433,32 +526,6 @@ Always maintain warm Filipino hospitality (Mabuhay!), share realistic cost estim
   // Sanitize and format history into valid Gemini alternating multiturn contents
   const contents = formatGeminiContents(history, messages, latestUserMessage);
 
-  // Helper for model stream with fallback
-  const tryStreamWithModel = async (modelName: string) => {
-    if (!ai) return null;
-    return await ai.models.generateContentStream({
-      model: modelName,
-      contents: contents,
-      config: {
-        systemInstruction: contextPrompt,
-        temperature: 0.7,
-      },
-    });
-  };
-
-  // Helper for model non-stream with fallback
-  const tryGenerateWithModel = async (modelName: string) => {
-    if (!ai) return null;
-    return await ai.models.generateContent({
-      model: modelName,
-      contents: contents,
-      config: {
-        systemInstruction: contextPrompt,
-        temperature: 0.75,
-      },
-    });
-  };
-
   // Handle Server-Sent Events (SSE) Streaming
   if (isStream) {
     res.setHeader("Content-Type", "text/event-stream; charset=utf-8");
@@ -478,16 +545,15 @@ Always maintain warm Filipino hospitality (Mabuhay!), share realistic cost estim
 
     if (ai) {
       try {
-        let streamResponse: any = null;
-        try {
-          streamResponse = await tryStreamWithModel("gemini-3.8-flash");
-        } catch (e1) {
-          console.warn("Retrying with gemini-2.5-flash fallback:", e1);
-          streamResponse = await tryStreamWithModel("gemini-2.5-flash");
-        }
+        const streamResult = await streamGeminiContentWithFallback(ai, {
+          contents,
+          systemInstruction: contextPrompt,
+          temperature: 0.7,
+          timeoutMs: 8000,
+        });
 
-        if (streamResponse) {
-          for await (const chunk of streamResponse) {
+        if (streamResult?.stream) {
+          for await (const chunk of streamResult.stream) {
             if (chunk.text) {
               sendChunk({ text: chunk.text, done: false });
             }
@@ -496,7 +562,7 @@ Always maintain warm Filipino hospitality (Mabuhay!), share realistic cost estim
           return res.end();
         }
       } catch (geminiError) {
-        console.warn("Gemini stream error, using rich knowledge engine:", geminiError);
+        console.warn("Gemini stream error, falling back to rich knowledge engine:", geminiError);
       }
     }
 
@@ -515,17 +581,18 @@ Always maintain warm Filipino hospitality (Mabuhay!), share realistic cost estim
   // Handle Standard Non-Streaming JSON
   if (ai) {
     try {
-      let response: any = null;
-      try {
-        response = await tryGenerateWithModel("gemini-3.8-flash");
-      } catch (e1) {
-        response = await tryGenerateWithModel("gemini-2.5-flash");
-      }
+      const generated = await generateGeminiContentWithFallback(ai, {
+        contents,
+        systemInstruction: contextPrompt,
+        temperature: 0.75,
+        timeoutMs: 9000,
+      });
 
-      if (response && response.text && response.text.trim()) {
+      if (generated && generated.text) {
         return res.json({
-          reply: response.text,
-          text: response.text,
+          reply: generated.text,
+          text: generated.text,
+          model: generated.model,
           success: true
         });
       }
@@ -603,17 +670,15 @@ You MUST return a valid JSON object matching this structure exactly:
   ]
 }`;
 
-      const response = await ai.models.generateContent({
-        model: "gemini-3.8-flash",
+      const response = await generateGeminiContentWithFallback(ai, {
         contents: jsonPrompt,
-        config: {
-          systemInstruction: BYAHEDOR_SYSTEM_INSTRUCTION,
-          responseMimeType: "application/json",
-          temperature: 0.6,
-        },
+        systemInstruction: BYAHEDOR_SYSTEM_INSTRUCTION,
+        responseMimeType: "application/json",
+        temperature: 0.6,
+        timeoutMs: 12000,
       });
 
-      if (response.text) {
+      if (response && response.text) {
         const cleanedText = response.text.replace(/```json/g, "").replace(/```/g, "").trim();
         const parsed = JSON.parse(cleanedText);
         if (parsed && Array.isArray(parsed.daysPlan) && parsed.daysPlan.length > 0) {
@@ -625,6 +690,7 @@ You MUST return a valid JSON object matching this structure exactly:
               travelers: numTravelers,
               totalBudget: budgetNum,
             },
+            model: response.model,
             success: true
           });
         }
@@ -670,22 +736,20 @@ Return ONLY a valid JSON array of objects:
   }
 ]`;
 
-        const response = await ai.models.generateContent({
-          model: "gemini-3.8-flash",
+        const response = await generateGeminiContentWithFallback(ai, {
           contents: prompt,
-          config: {
-            systemInstruction: BYAHEDOR_SYSTEM_INSTRUCTION,
-            responseMimeType: "application/json",
-            temperature: 0.5,
-          }
+          systemInstruction: BYAHEDOR_SYSTEM_INSTRUCTION,
+          responseMimeType: "application/json",
+          temperature: 0.5,
+          timeoutMs: 10000,
         });
 
-        if (response.text) {
+        if (response && response.text) {
           const cleaned = response.text.replace(/```json/g, "").replace(/```/g, "").trim();
           const suggestions = JSON.parse(cleaned);
           if (Array.isArray(suggestions) && suggestions.length > 0) {
             const totalPotentialSavings = suggestions.reduce((sum, s) => sum + (Number(s.savingsPHP) || 0), 0);
-            return res.json({ suggestions, totalPotentialSavings, success: true });
+            return res.json({ suggestions, totalPotentialSavings, model: response.model, success: true });
           }
         }
       } catch (e) {
@@ -806,17 +870,15 @@ Return ONLY a JSON array of category objects:
   }
 ]`;
 
-        const response = await ai.models.generateContent({
-          model: "gemini-3.7-flash",
+        const response = await generateGeminiContentWithFallback(ai, {
           contents: prompt,
-          config: {
-            systemInstruction: BYAHEDOR_SYSTEM_INSTRUCTION,
-            responseMimeType: "application/json",
-            temperature: 0.5,
-          }
+          systemInstruction: BYAHEDOR_SYSTEM_INSTRUCTION,
+          responseMimeType: "application/json",
+          temperature: 0.5,
+          timeoutMs: 10000,
         });
 
-        if (response.text) {
+        if (response && response.text) {
           const cleaned = response.text.replace(/```json/g, "").replace(/```/g, "").trim();
           const parsed = JSON.parse(cleaned);
           if (Array.isArray(parsed) && parsed.length > 0) {
@@ -825,6 +887,7 @@ Return ONLY a JSON array of category objects:
               checklist: parsed,
               destination: dest,
               days,
+              model: response.model,
               success: true
             });
           }
