@@ -7,7 +7,11 @@ import dotenv from "dotenv";
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
+const portArgIndex = process.argv.indexOf("--port");
+const argPort = portArgIndex !== -1 && process.argv[portArgIndex + 1] ? parseInt(process.argv[portArgIndex + 1], 10) : null;
+const envPort = process.env.PORT && process.env.PORT !== "8080" ? parseInt(process.env.PORT, 10) : null;
+const defaultAppPort = process.env.DEFAULT_APP_PORT ? parseInt(process.env.DEFAULT_APP_PORT, 10) : null;
+const PORT = argPort || defaultAppPort || envPort || 3000;
 
 app.use(express.json());
 
@@ -20,9 +24,49 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
   ]);
 }
 
-const PRIMARY_AI_MODEL = "gemini-3.5-flash-lite";
-const SECONDARY_AI_MODEL = "gemini-3.1-flash-lite";
-const TERTIARY_AI_MODEL = "gemini-3.5-flash";
+const CANDIDATE_AI_MODELS = [
+  "gemini-flash-lite-latest",
+  "gemini-3-flash-preview",
+  "gemini-3.8-flash",
+  "gemini-3.1-flash-lite"
+];
+
+// Robust JSON parser for AI outputs that may contain markdown or extra wrapping
+function safeParseAiJson(rawText: string): any {
+  if (!rawText || !rawText.trim()) return null;
+  let text = rawText.trim();
+  // Strip code fences
+  text = text.replace(/```(?:json)?/gi, "").replace(/```/g, "").trim();
+  try {
+    return JSON.parse(text);
+  } catch {
+    // If wrapped in commentary, extract the JSON object or array bounds
+    const firstBrace = text.indexOf("{");
+    const firstBracket = text.indexOf("[");
+    let start = -1;
+    if (firstBrace !== -1 && firstBracket !== -1) {
+      start = Math.min(firstBrace, firstBracket);
+    } else if (firstBrace !== -1) {
+      start = firstBrace;
+    } else {
+      start = firstBracket;
+    }
+
+    const lastBrace = text.lastIndexOf("}");
+    const lastBracket = text.lastIndexOf("]");
+    const end = Math.max(lastBrace, lastBracket);
+
+    if (start !== -1 && end !== -1 && end > start) {
+      try {
+        const sliced = text.substring(start, end + 1);
+        return JSON.parse(sliced);
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  }
+}
 
 let aiClient: GoogleGenAI | null = null;
 function getAIClient(): GoogleGenAI | null {
@@ -56,8 +100,8 @@ async function generateGeminiContentWithFallback(ai: GoogleGenAI, options: {
   temperature?: number;
   timeoutMs?: number;
 }): Promise<{ text: string; model: string } | null> {
-  const models = [PRIMARY_AI_MODEL, SECONDARY_AI_MODEL, TERTIARY_AI_MODEL];
-  const timeoutMs = options.timeoutMs || 10000;
+  const models = CANDIDATE_AI_MODELS;
+  const timeoutMs = options.timeoutMs || 25000;
 
   for (const model of models) {
     try {
@@ -93,8 +137,8 @@ async function streamGeminiContentWithFallback(ai: GoogleGenAI, options: {
   temperature?: number;
   timeoutMs?: number;
 }): Promise<{ stream: any; model: string } | null> {
-  const models = [PRIMARY_AI_MODEL, SECONDARY_AI_MODEL];
-  const timeoutMs = options.timeoutMs || 8000;
+  const models = CANDIDATE_AI_MODELS;
+  const timeoutMs = options.timeoutMs || 20000;
 
   for (const model of models) {
     try {
@@ -543,30 +587,38 @@ Always maintain warm Filipino hospitality (Mabuhay!), share realistic cost estim
       }
     };
 
+    let hasStreamedAnyChunk = false;
     if (ai) {
       try {
         const streamResult = await streamGeminiContentWithFallback(ai, {
           contents,
           systemInstruction: contextPrompt,
           temperature: 0.7,
-          timeoutMs: 8000,
+          timeoutMs: 20000,
         });
 
         if (streamResult?.stream) {
           for await (const chunk of streamResult.stream) {
             if (chunk.text) {
+              hasStreamedAnyChunk = true;
               sendChunk({ text: chunk.text, done: false });
             }
           }
-          sendChunk({ done: true });
-          return res.end();
+          if (hasStreamedAnyChunk) {
+            sendChunk({ done: true });
+            return res.end();
+          }
         }
       } catch (geminiError) {
         console.warn("Gemini stream error, falling back to rich knowledge engine:", geminiError);
+        if (hasStreamedAnyChunk) {
+          sendChunk({ done: true });
+          return res.end();
+        }
       }
     }
 
-    // Stream fallback tokens smoothly for instant responsive feedback
+    // Stream fallback tokens smoothly if Gemini stream was unavailable
     const fallbackText = getFallbackChatResponse(latestUserMessage, currentLang);
     const tokens = fallbackText.match(/\S+\s*|\n+/g) || [fallbackText];
     for (const token of tokens) {
@@ -585,7 +637,7 @@ Always maintain warm Filipino hospitality (Mabuhay!), share realistic cost estim
         contents,
         systemInstruction: contextPrompt,
         temperature: 0.75,
-        timeoutMs: 9000,
+        timeoutMs: 25000,
       });
 
       if (generated && generated.text) {
@@ -675,24 +727,62 @@ You MUST return a valid JSON object matching this structure exactly:
         systemInstruction: BYAHEDOR_SYSTEM_INSTRUCTION,
         responseMimeType: "application/json",
         temperature: 0.6,
-        timeoutMs: 12000,
+        timeoutMs: 30000,
       });
 
       if (response && response.text) {
-        const cleanedText = response.text.replace(/```json/g, "").replace(/```/g, "").trim();
-        const parsed = JSON.parse(cleanedText);
-        if (parsed && Array.isArray(parsed.daysPlan) && parsed.daysPlan.length > 0) {
-          return res.json({
-            plan: {
-              ...parsed,
-              destination: dest,
-              days: numDays,
-              travelers: numTravelers,
-              totalBudget: budgetNum,
-            },
-            model: response.model,
-            success: true
-          });
+        const parsed = safeParseAiJson(response.text);
+        if (parsed) {
+          const root = parsed.plan || parsed.itinerary || parsed;
+          const rawDays = root.daysPlan || root.itinerary || root.days || root.dailyPlan || root.schedule;
+          
+          if (Array.isArray(rawDays) && rawDays.length > 0) {
+            const normalizedDaysPlan = rawDays.map((d: any, idx: number) => ({
+              dayNumber: Number(d.dayNumber || d.day || idx + 1),
+              theme: String(d.theme || d.title || `Day ${idx + 1} Adventure`),
+              activities: Array.isArray(d.activities) ? d.activities.map((a: any) => ({
+                time: String(a.time || "09:00 AM"),
+                activity: String(a.activity || a.title || a.name || "Explore local highlights"),
+                location: String(a.location || a.place || dest),
+                duration: String(a.duration || "2 hours"),
+                estimatedCostPHP: Number(a.estimatedCostPHP || a.cost || a.price || 300),
+                icon: String(a.icon || "compass")
+              })) : []
+            }));
+
+            const normalizedBreakdown = root.budgetBreakdown || {
+              transportation: Math.round(budgetNum * 0.25),
+              accommodation: Math.round(budgetNum * 0.35),
+              food: Math.round(budgetNum * 0.20),
+              activities: Math.round(budgetNum * 0.15),
+              emergency: Math.round(budgetNum * 0.05)
+            };
+
+            const normalizedTips = Array.isArray(root.localTips) && root.localTips.length > 0
+              ? root.localTips
+              : Array.isArray(root.tips) ? root.tips
+              : [
+                  "Carry sufficient Philippine Peso (₱) cash as local tricycles and island boatmen are cash-only.",
+                  "Support local community eco-guides and bring your own reusable tumbler and dry bag.",
+                  "Confirm local pumpboat or ferry schedules early in the morning before tides change."
+                ];
+
+            return res.json({
+              plan: {
+                title: root.title || `${numDays}-Day ${dest} Journey`,
+                destination: dest,
+                days: numDays,
+                travelers: numTravelers,
+                totalBudget: budgetNum,
+                overview: root.overview || `An unforgettable ${numDays}-day journey exploring ${dest}.`,
+                budgetBreakdown: normalizedBreakdown,
+                daysPlan: normalizedDaysPlan,
+                localTips: normalizedTips
+              },
+              model: response.model,
+              success: true
+            });
+          }
         }
       }
     } catch (genError) {
@@ -741,15 +831,28 @@ Return ONLY a valid JSON array of objects:
           systemInstruction: BYAHEDOR_SYSTEM_INSTRUCTION,
           responseMimeType: "application/json",
           temperature: 0.5,
-          timeoutMs: 10000,
+          timeoutMs: 25000,
         });
 
         if (response && response.text) {
-          const cleaned = response.text.replace(/```json/g, "").replace(/```/g, "").trim();
-          const suggestions = JSON.parse(cleaned);
-          if (Array.isArray(suggestions) && suggestions.length > 0) {
-            const totalPotentialSavings = suggestions.reduce((sum, s) => sum + (Number(s.savingsPHP) || 0), 0);
-            return res.json({ suggestions, totalPotentialSavings, model: response.model, success: true });
+          const parsed = safeParseAiJson(response.text);
+          if (parsed) {
+            const rawList = Array.isArray(parsed) 
+              ? parsed 
+              : (parsed.suggestions || parsed.swaps || parsed.items || parsed.recommendations || []);
+
+            if (Array.isArray(rawList) && rawList.length > 0) {
+              const suggestions = rawList.map((item: any) => ({
+                category: String(item.category || item.type || "General"),
+                original: String(item.original || item.standard || "Standard option"),
+                alternative: String(item.alternative || item.swap || item.recommendation || "Smart budget alternative"),
+                savingsPHP: Number(item.savingsPHP || item.savings || item.estimatedSavings || 1000),
+                description: String(item.description || item.reason || item.tip || "Save money by choosing authentic local options.")
+              }));
+
+              const totalPotentialSavings = suggestions.reduce((sum, s) => sum + (Number(s.savingsPHP) || 0), 0);
+              return res.json({ suggestions, totalPotentialSavings, model: response.model, success: true });
+            }
           }
         }
       } catch (e) {
@@ -875,21 +978,39 @@ Return ONLY a JSON array of category objects:
           systemInstruction: BYAHEDOR_SYSTEM_INSTRUCTION,
           responseMimeType: "application/json",
           temperature: 0.5,
-          timeoutMs: 10000,
+          timeoutMs: 25000,
         });
 
         if (response && response.text) {
-          const cleaned = response.text.replace(/```json/g, "").replace(/```/g, "").trim();
-          const parsed = JSON.parse(cleaned);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            return res.json({
-              categories: parsed,
-              checklist: parsed,
-              destination: dest,
-              days,
-              model: response.model,
-              success: true
-            });
+          const parsed = safeParseAiJson(response.text);
+          if (parsed) {
+            const rawCategories = Array.isArray(parsed) 
+              ? parsed 
+              : (parsed.categories || parsed.checklist || parsed.items || parsed.sections || []);
+
+            if (Array.isArray(rawCategories) && rawCategories.length > 0) {
+              const categories = rawCategories.map((cat: any, cIdx: number) => ({
+                name: String(cat.name || cat.category || cat.title || `Category ${cIdx + 1}`),
+                items: Array.isArray(cat.items) ? cat.items.map((item: any, iIdx: number) => ({
+                  id: String(item.id || `item-${cIdx}-${iIdx}-${Date.now()}`),
+                  label: String(item.label || item.item || item.name || "Travel essential"),
+                  category: String(cat.name || cat.category || cat.title || "Essentials"),
+                  isChecked: Boolean(item.isChecked ?? false),
+                  isEssential: Boolean(item.isEssential ?? true)
+                })) : []
+              })).filter(c => c.items.length > 0);
+
+              if (categories.length > 0) {
+                return res.json({
+                  categories,
+                  checklist: categories,
+                  destination: dest,
+                  days,
+                  model: response.model,
+                  success: true
+                });
+              }
+            }
           }
         }
       } catch (e) {

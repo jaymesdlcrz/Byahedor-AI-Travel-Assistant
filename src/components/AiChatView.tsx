@@ -232,7 +232,8 @@ export const AiChatView: React.FC<AiChatViewProps> = ({
         let accumulatedText = '';
         let streamBuffer = '';
 
-        while (true) {
+        let streamCompleted = false;
+        while (!streamCompleted) {
           const { done, value } = await reader.read();
           if (done) break;
 
@@ -252,27 +253,31 @@ export const AiChatView: React.FC<AiChatViewProps> = ({
 
                   if (parsed.text) {
                     accumulatedText += parsed.text;
-                    setMessages(prev =>
-                      prev.map(m =>
-                        m.id === aiMsgId
-                          ? { ...m, text: accumulatedText, isStreaming: !parsed.done }
-                          : m
-                      )
-                    );
-                    // Instant DOM follow as text streams in
-                    if (scrollContainerRef.current) {
-                      scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
-                    }
                   }
 
                   if (parsed.done) {
-                    break;
+                    streamCompleted = true;
                   }
+
+                  setMessages(prev =>
+                    prev.map(m =>
+                      m.id === aiMsgId
+                        ? { ...m, text: accumulatedText, isStreaming: !streamCompleted }
+                        : m
+                    )
+                  );
+
+                  if (scrollContainerRef.current) {
+                    scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
+                  }
+
+                  if (streamCompleted) break;
                 } catch {
                   // Wait for complete chunk
                 }
               }
             }
+            if (streamCompleted) break;
           }
         }
 
@@ -553,10 +558,19 @@ export const AiChatView: React.FC<AiChatViewProps> = ({
                           )
                         }}
                       >
-                        {msg.text || (isStreamingMsg ? ' ' : '...')}
+                        {msg.text}
                       </Markdown>
 
-                      {isStreamingMsg && (
+                      {isStreamingMsg && !msg.text && (
+                        <div className="flex items-center gap-1.5 py-1 text-slate-500 dark:text-slate-400">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#087EA4] animate-bounce" />
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#4DB8E8] animate-bounce [animation-delay:150ms]" />
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#39A96B] animate-bounce [animation-delay:300ms]" />
+                          <span className="text-[11px] font-medium ml-1">Byahedor is thinking...</span>
+                        </div>
+                      )}
+
+                      {isStreamingMsg && msg.text && (
                         <span className="inline-block w-1.5 h-3.5 bg-[#087EA4] dark:bg-[#4DB8E8] animate-pulse ml-0.5 align-middle rounded-xs" />
                       )}
                     </div>
@@ -642,21 +656,6 @@ export const AiChatView: React.FC<AiChatViewProps> = ({
             </div>
           );
         })}
-
-        {/* Real-time Streaming Waiting Indicator */}
-        {isTyping && !messages.some(m => m.isStreaming && m.text.length > 0) && (
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-gradient-to-tr from-[#087EA4] to-[#39A96B] text-white flex items-center justify-center shadow-2xs">
-              <Bot className="w-3.5 h-3.5" />
-            </div>
-            <div className="bg-slate-100 dark:bg-slate-800/80 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#087EA4] animate-bounce" />
-              <span className="w-1.5 h-1.5 rounded-full bg-[#4DB8E8] animate-bounce delay-100" />
-              <span className="w-1.5 h-1.5 rounded-full bg-[#39A96B] animate-bounce delay-200" />
-              <span className="text-[11px] text-[#627D98] dark:text-slate-300 font-medium ml-1">Byahedor is writing...</span>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Floating Jump to Latest Button if User Scrolled Up */}
