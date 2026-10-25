@@ -56,7 +56,7 @@ function projectGeo(lat: number, lng: number, viewBoxWidth = 600, viewBoxHeight 
   };
 }
 
-export type RouteId = 'all' | 'palawan-loop' | 'visayas-trio' | 'cordillera-trail' | 'siargao-surf';
+export type RouteId = 'all' | 'palawan-loop' | 'visayas-trio' | 'cordillera-trail' | 'siargao-surf' | 'volcano-corridor';
 export type MapLayer = 'all' | 'lanes' | 'climate';
 export type RegionFilter = 'All' | 'Luzon' | 'Visayas' | 'Mindanao' | 'Palawan';
 
@@ -151,8 +151,8 @@ export const ExploreMapView: React.FC<ExploreMapViewProps> = ({
       id: 'cordillera-trail',
       name: 'Northern Highlands Heritage',
       badge: 'Mountain Pass',
-      desc: 'Manila ➔ Vigan ➔ Sagada ➔ Banaue (Cobblestones, pine peaks & rice terraces).',
-      destinationIds: ['vigan', 'sagada'],
+      desc: 'Manila ➔ Vigan ➔ Sagada ➔ Baguio (Cobblestones, pine peaks & ancient rice terraces).',
+      destinationIds: ['vigan', 'sagada', 'baguio'],
       stops: [
         {
           from: 'Metro Manila (Cubao)',
@@ -172,11 +172,36 @@ export const ExploreMapView: React.FC<ExploreMapViewProps> = ({
         },
         {
           from: 'Sagada Town',
-          to: 'Banaue Rice Terraces',
-          mode: 'van',
-          duration: '2.5 hrs',
-          fare: '₱250 Jeepney/Van',
-          operator: 'Bontoc-Banaue Line'
+          to: 'Baguio City (Halsema Highway)',
+          mode: 'bus',
+          duration: '5 - 6 hrs',
+          fare: '₱350 Mountain Coach',
+          operator: 'GL Lizardo / Rising Sun Bus'
+        }
+      ]
+    },
+    {
+      id: 'volcano-corridor',
+      name: 'Southern Volcano & Ridge Circuit',
+      badge: 'Volcanic Highway',
+      desc: 'Manila ➔ Tagaytay Ridge ➔ Mayon Volcano Albay (Crater lake vistas, bulalo feasts & black lava ATV trails).',
+      destinationIds: ['tagaytay', 'bicol-mayon'],
+      stops: [
+        {
+          from: 'Metro Manila (PITX)',
+          to: 'Tagaytay Ridge',
+          mode: 'bus',
+          duration: '1.5 - 2 hrs',
+          fare: '₱120 - ₱160',
+          operator: 'San Agustin / DLTB Bus'
+        },
+        {
+          from: 'Tagaytay / Manila',
+          to: 'Legazpi City (Bicol)',
+          mode: 'flight',
+          duration: '1 hr (or 9 hrs sleeper bus)',
+          fare: '₱2,200 - ₱3,500',
+          operator: 'Cebu Pacific / PAL to Bicol Airport (DRP)'
         }
       ]
     },
@@ -184,8 +209,8 @@ export const ExploreMapView: React.FC<ExploreMapViewProps> = ({
       id: 'siargao-surf',
       name: 'Pacific Waves & Southern Swell',
       badge: 'Island Flight & Sea Lane',
-      desc: 'Cebu ➔ Siargao (Cloud 9 surf breaks, rock pools & coconut palm highways).',
-      destinationIds: ['cebu', 'siargao'],
+      desc: 'Cebu ➔ Siargao ➔ Camiguin (Cloud 9 surf breaks, lagoons & volcanic White Island sandbar).',
+      destinationIds: ['cebu', 'siargao', 'camiguin'],
       stops: [
         {
           from: 'Cebu (CEB)',
@@ -202,6 +227,14 @@ export const ExploreMapView: React.FC<ExploreMapViewProps> = ({
           duration: '1.5 - 2 hrs',
           fare: '₱350 - ₱500',
           operator: 'Evaristo / Dapa Express Fastcraft'
+        },
+        {
+          from: 'Balingoan Port',
+          to: 'Benoni Port (Camiguin)',
+          mode: 'ferry',
+          duration: '1 hr',
+          fare: '₱350 RoRo Ferry',
+          operator: 'Super Shuttle / Camiguin Express'
         }
       ]
     }
@@ -1136,6 +1169,9 @@ export const ExploreMapView: React.FC<ExploreMapViewProps> = ({
                 alt={selectedPin.name}
                 className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                 referrerPolicy="no-referrer"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = 'https://upload.wikimedia.org/wikipedia/commons/4/45/Cloud_9_Boardwalk%2C_Siargao.jpg';
+                }}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent" />
               

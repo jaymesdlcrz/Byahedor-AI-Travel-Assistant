@@ -46,7 +46,7 @@ How can I help you plan your next *byahe* today? (You can chat with me in Englis
 const KNOWN_DESTINATIONS = [
   'Siargao', 'El Nido', 'Coron', 'Palawan', 'Cebu', 'Batanes', 
   'Bohol', 'Boracay', 'Baguio', 'Sagada', 'Vigan', 'Camiguin', 
-  'Davao', 'Iloilo', 'Bacolod', 'Siquijor', 'Bicol', 'Puerto Princesa',
+  'Davao', 'Iloilo', 'Bacolod', 'Siquijor', 'Bicol', 'Mayon', 'Tagaytay', 'Puerto Princesa',
   'La Union', 'Zambales', 'Dumaguete', 'Panglao'
 ];
 

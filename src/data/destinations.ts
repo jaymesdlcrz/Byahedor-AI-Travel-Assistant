@@ -463,5 +463,211 @@ export const DESTINATIONS: Destination[] = [
     ],
     rating: 4.84,
     reviewCount: 375
+  },
+  {
+    id: 'baguio',
+    name: 'Baguio City',
+    location: 'Benguet, Cordillera, Philippines',
+    region: 'Luzon',
+    tagline: 'The Summer Capital of the Philippines & City of Pines',
+    description: 'Perched 1,500 meters above sea level in the Cordillera mountain range, Baguio offers crisp pine-scented mountain air, scenic boat rides at Burnham Park, sweet strawberry picking in La Trinidad, historic military heritage at Camp John Hay, and thriving indigenous arts.',
+    heroImage: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a6/Baguio_city_proper_overlooking_Burnham-Harrison_side_%28Baguio_city%3B_12-04-2022%29.jpg/1280px-Baguio_city_proper_overlooking_Burnham-Harrison_side_%28Baguio_city%3B_12-04-2022%29.jpg',
+    galleryImages: [
+      'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9a/Burnham_Park_Rose_Garden_with_city_hall_view_%28Baguio_City%3B_12-04-2022%29.jpg/1280px-Burnham_Park_Rose_Garden_with_city_hall_view_%28Baguio_City%3B_12-04-2022%29.jpg',
+      'https://upload.wikimedia.org/wikipedia/commons/thumb/f/f9/Army_Navy%2C_Camp_John_Hay.JPG/1280px-Army_Navy%2C_Camp_John_Hay.JPG'
+    ],
+    estimatedDailyBudgetPHP: 2200,
+    bestTimeToVisit: 'November to February (Coolest months, Panagbenga Flower Festival in February)',
+    idealDurationDays: 3,
+    tags: ['Pine Forests', 'Cool Mountain Climate', 'Strawberry Picking', 'Art & Culture', 'Cafes'],
+    coordinates: { lat: 16.4023, lng: 120.5960 },
+    popularActivities: [
+      {
+        title: 'Strawberry Picking at La Trinidad Farm',
+        description: 'Harvest ripe red strawberries directly from agricultural rows alongside local Benguet farmers.',
+        costPHP: 500,
+        duration: '2 hours'
+      },
+      {
+        title: 'Camp John Hay Pine Trail & Historical Core',
+        description: 'Trek serene pine tree-canopied paths, visit the Bell Amphitheater, and enjoy hot cocoa.',
+        costPHP: 150,
+        duration: '3 hours'
+      },
+      {
+        title: 'BenCab Museum & Tam-awan Cultural Tour',
+        description: 'Discover contemporary masterpieces by National Artist Benedicto Cabrera and traditional Ifugao huts.',
+        costPHP: 300,
+        duration: '3 hours'
+      },
+      {
+        title: 'Burnham Park Swan Boat Rowing & Night Market',
+        description: 'Row swan boats on the lake by day and thrift for vintage street finds along Harrison Road at night.',
+        costPHP: 200,
+        duration: '2 hours'
+      }
+    ],
+    localSpecialties: ['Fresh Strawberry Taho with sago', 'Good Shepherd Ube Jam & Alfajores', 'Garlicky Baguio Longganisa', 'Sundot Kulangot candy', 'Benguet Arabica Coffee'],
+    travelTips: [
+      'Ride JoyBus or Genesis point-to-point luxury sleeper buses from Cubao or Pasay via TPLEX (approx. 4 hours).',
+      'Bring warm jackets and fleece sweaters; evening temperatures regularly drop to 11–14°C.',
+      'Visit Good Shepherd Convent early in the morning before ube jam stocks sell out.'
+    ],
+    rating: 4.87,
+    reviewCount: 610
+  },
+  {
+    id: 'camiguin',
+    name: 'Camiguin Island',
+    location: 'Northern Mindanao, Philippines',
+    region: 'Mindanao',
+    tagline: 'The Island Born of Fire, White Sandbars & Giant Clams',
+    description: 'A breathtaking volcanic wonderland boasting more volcanoes than towns. Walk the crescent-shaped powdery white sandbar of White Island with Mt. Hibok-Hibok looming in the background, snorkel above the submerged crosses of the Sunken Cemetery, and plunge into Katibawasan and Tuasan forest waterfalls.',
+    heroImage: 'https://upload.wikimedia.org/wikipedia/commons/4/44/Hibokwhiteisl.jpg',
+    galleryImages: [
+      'https://upload.wikimedia.org/wikipedia/commons/thumb/1/1f/Sunken_Cemetery_-_Camiguin_-_panoramio.jpg/1280px-Sunken_Cemetery_-_Camiguin_-_panoramio.jpg',
+      'https://upload.wikimedia.org/wikipedia/commons/thumb/4/4b/Timpoong_and_Hibok-Hibok_Natural_Monument_in_Camiguin_-_Allan_Jay_Quesada.jpg/1280px-Timpoong_and_Hibok-Hibok_Natural_Monument_in_Camiguin_-_Allan_Jay_Quesada.jpg'
+    ],
+    estimatedDailyBudgetPHP: 2400,
+    bestTimeToVisit: 'March to October (Dry calm seas, Lanzones Festival in late October)',
+    idealDurationDays: 3,
+    tags: ['Volcanic Island', 'White Sandbar', 'Hot & Cold Springs', 'Snorkeling', 'Waterfalls'],
+    coordinates: { lat: 9.1732, lng: 124.7299 },
+    popularActivities: [
+      {
+        title: 'White Island Sandbar Sunrise Outrigger Cruise',
+        description: 'Sail to an uninhabited gleaming white sandbar with 360-degree views of Camiguin volcanoes.',
+        costPHP: 550,
+        duration: '3 hours'
+      },
+      {
+        title: 'Sunken Cemetery Giant Clam Snorkeling',
+        description: 'Snorkel among thriving coral gardens and giant clams around the iconic giant sea cross.',
+        costPHP: 300,
+        duration: '2 hours'
+      },
+      {
+        title: 'Katibawasan Falls & Ardent Hot Springs',
+        description: 'Swim beneath a 250ft roaring plunge waterfall and soak in soothing natural geothermal hot springs.',
+        costPHP: 200,
+        duration: '3 hours'
+      },
+      {
+        title: 'Mt. Hibok-Hibok Volcano Crater Trek',
+        description: 'Ascend through mossy cloud forests to the crater summit with licensed community guides.',
+        costPHP: 1200,
+        duration: '6 hours'
+      }
+    ],
+    localSpecialties: ['Sweet Camiguin Lanzones', 'Pastel de Camiguin (Custard filled sweet buns)', 'Kiping (Crispy cassava wafer with coconut caramel)', 'Chicken Surol in coconut milk with ginger'],
+    travelTips: [
+      'Accessible via ferry from Balingoan Port (Misamis Oriental) or domestic flights into Camiguin Airport (CGM).',
+      'Rent a scooter for ₱350/day to tour the scenic, well-paved 64km circumferential island highway.',
+      'Head out to White Island at 5:30 AM before sunrise as there is zero natural shade on the sandbar.'
+    ],
+    rating: 4.92,
+    reviewCount: 330
+  },
+  {
+    id: 'bicol-mayon',
+    name: 'Bicol & Mount Mayon',
+    location: 'Albay, Bicol Region, Philippines',
+    region: 'Luzon',
+    tagline: 'World’s Most Perfect Cone Volcano, Lava Trails & Fiery Gastronomy',
+    description: 'Home to the world-famous, mathematically symmetrical Mount Mayon, Albay combines thrilling volcanic outdoor adventure with spicy, coconut-rich gastronomy. Ride all-terrain ATVs across rugged black lava fields, admire the historic 1814 Cagsawa bell tower ruins, and savor fiery authentic Bicol Express.',
+    heroImage: 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/54/Cagsawa_ruins.jpg/1280px-Cagsawa_ruins.jpg',
+    galleryImages: [
+      'https://upload.wikimedia.org/wikipedia/commons/thumb/0/0f/Mount_Mayon_Cagsawa_field_view_close-up_%28Busay%2C_Daraga%2C_Albay%3B_04-21-2023%29.jpg/1280px-Mount_Mayon_Cagsawa_field_view_close-up_%28Busay%2C_Daraga%2C_Albay%3B_04-21-2023%29.jpg'
+    ],
+    estimatedDailyBudgetPHP: 2500,
+    bestTimeToVisit: 'March to May (Clear skies offering the most unobstructed views of Mayon peak)',
+    idealDurationDays: 3,
+    tags: ['Active Volcano', 'ATV Lava Trails', 'Historic Ruins', 'Spicy Food', 'Nature Adventures'],
+    coordinates: { lat: 13.2548, lng: 123.6861 },
+    popularActivities: [
+      {
+        title: 'Mayon Black Lava ATV Adventure',
+        description: 'Trek on quad bikes across volcanic riverbeds up to the monumental 2006 Black Lava Wall front.',
+        costPHP: 1800,
+        duration: '3 hours'
+      },
+      {
+        title: 'Cagsawa Ruins Park & Bell Tower Photography',
+        description: 'Capture the classic postcard view of the 1814 church belfry with Mayon looming behind.',
+        costPHP: 100,
+        duration: '1.5 hours'
+      },
+      {
+        title: 'Sumlang Lake Bamboo Rafting',
+        description: 'Glide on quiet native bamboo rafts with mirror reflections of the volcano on clear mornings.',
+        costPHP: 250,
+        duration: '2 hours'
+      },
+      {
+        title: 'Quitinday Green Hills & Pocket Caves Exploration',
+        description: 'Hike Albay version of rolling karst hills and explore natural limestone caves.',
+        costPHP: 400,
+        duration: '3 hours'
+      }
+    ],
+    localSpecialties: ['Authentic Bicol Express', 'Pinangat na Gabi', 'Sili Ice Cream (Chili Ice Cream at 1st Colonial)', 'Crispy Pili Nut candies', 'Toasted Siopao'],
+    travelTips: [
+      'Book morning ATV rides between 6:00 AM and 8:30 AM before cloud covers typically gather over Mayon cone.',
+      'Bicol International Airport (DRP) in Daraga is only 20 minutes from Legazpi City proper.',
+      'Test your spice tolerance with Level 1 Sili Ice Cream before daring Level 3 Volcano heat.'
+    ],
+    rating: 4.89,
+    reviewCount: 415
+  },
+  {
+    id: 'tagaytay',
+    name: 'Tagaytay & Taal Lake',
+    location: 'Cavite & Batangas, Philippines',
+    region: 'Luzon',
+    tagline: 'Scenic Ridge Views, Crater Lakes & Steaming Bulalo',
+    description: 'Perched 600 meters above sea level overlooking the world-famous Taal Lake and Volcano island, Tagaytay is the premier quick cool-climate weekend getaway from Manila. Renowned for its steaming pots of beef marrow Bulalo, boutique farm-to-table restaurants, and panoramic volcanic vistas.',
+    heroImage: 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/93/Taal_Lake_and_Volcano%2C_Tagaytay%2C_Philippines.jpg/1280px-Taal_Lake_and_Volcano%2C_Tagaytay%2C_Philippines.jpg',
+    galleryImages: [
+      'https://upload.wikimedia.org/wikipedia/commons/thumb/8/89/Tagaytay_Highlands%2C_Philippines_%28lulaymb%29_3_-_Flickr.jpg/1280px-Tagaytay_Highlands%2C_Philippines_%28lulaymb%29_3_-_Flickr.jpg'
+    ],
+    estimatedDailyBudgetPHP: 2400,
+    bestTimeToVisit: 'November to March (Cool mountain breezes and clear blue skies)',
+    idealDurationDays: 2,
+    tags: ['Crater Lake Views', 'Cool Weather', 'Foodie & Bulalo', 'Boutique Cafes', 'Weekend Getaway'],
+    coordinates: { lat: 14.1153, lng: 120.9621 },
+    popularActivities: [
+      {
+        title: 'Tagaytay Ridge & Picnic Grove Taal Lake Viewing',
+        description: 'Admire dramatic views of the volcanic island within a lake, zipline, and ride horses.',
+        costPHP: 150,
+        duration: '2 hours'
+      },
+      {
+        title: 'Mahogany Market Authentic Bulalo Feast',
+        description: 'Feast on simmering pots of rich beef marrow soup fresh from the butchers on the lower level.',
+        costPHP: 450,
+        duration: '1.5 hours'
+      },
+      {
+        title: 'Sonya’s Garden & Organic Farm Experience',
+        description: 'Wander lush botanical gardens, savor freshly harvested edible flower salads, and relax with spa treatments.',
+        costPHP: 650,
+        duration: '3 hours'
+      },
+      {
+        title: 'People’s Park in the Sky 360-Degree Panorama',
+        description: 'Visit the highest point in Tagaytay overlooking Laguna de Bay, Taal Lake, and Batangas coastlines.',
+        costPHP: 100,
+        duration: '2 hours'
+      }
+    ],
+    localSpecialties: ['Steaming Beef Bone Marrow Bulalo', 'Crispy Tawilis (Freshwater sardine)', 'Señorita miniature sweet bananas', 'Freshly baked Buko Pie from Cecilia’s or Colette’s', 'Kapeng Barako (Strong Liberica coffee)'],
+    travelTips: [
+      'Just a 1.5 to 2-hour bus or van ride from Metro Manila (PITX Terminal) via CAVITEX or SLEX.',
+      'Head to Mahogany Market upper floor for the most generous, authentic Bulalo servings in town.',
+      'Buy warm Buko Pie right out of the oven from original roadside bakeries along Aguinaldo Highway.'
+    ],
+    rating: 4.81,
+    reviewCount: 590
   }
 ];

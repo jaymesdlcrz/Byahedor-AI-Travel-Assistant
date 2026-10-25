@@ -236,6 +236,34 @@ function getFallbackDestinationPlan(destination: string, days: number, travelers
       "Take an e-trike (₱15–₱50) for comfortable transit between Station 1, D'Mall, and Station 3.",
       "Catch the Paraw sunset sail around 5:00 PM for the most breathtaking golden hour view."
     ];
+  } else if (dLower.includes("baguio")) {
+    overview = `Cool mountain pines getaway in the Summer Capital featuring strawberry picking, Camp John Hay historical trails, Burnham Park lake boating, and BenCab Museum arts.`;
+    tips = [
+      "Bring fleece jackets or sweaters; evening temperatures in the mountain city easily drop below 14°C.",
+      "Ride JoyBus or Genesis point-to-point luxury sleeper buses from Cubao via TPLEX for the smoothest 4-hour ride.",
+      "Wake up early to buy fresh Good Shepherd Ube Jam before afternoon queues form."
+    ];
+  } else if (dLower.includes("camiguin")) {
+    overview = `Volcanic wonder born of fire: gleaming white sandbars at White Island, diving around the Sunken Cemetery, roaring Katibawasan plunge falls, and sweet lanzones.`;
+    tips = [
+      "Rent a scooter (₱350/day) at Benoni Port or Mambajao to easily circle the scenic 64km island highway.",
+      "Catch the first outrigger boat to White Island at 5:30 AM before sunrise as the sandbar has zero natural shade.",
+      "Soak in the Ardent Geothermal Hot Springs in the late evening after a full day of trekking."
+    ];
+  } else if (dLower.includes("mayon") || dLower.includes("bicol") || dLower.includes("albay")) {
+    overview = `Adventure in Albay under the shadow of the world's most perfect cone volcano, featuring black lava ATV rides, 1814 Cagsawa ruins, and spicy coconut Bicol Express.`;
+    tips = [
+      "Schedule your Mayon ATV adventure early (6:00–8:30 AM) when skies are clear before cloud cover blankets the peak.",
+      "Fly directly into Bicol International Airport (DRP) in Daraga, just 20 minutes from Legazpi City proper.",
+      "Sample Level 1 Sili Ice Cream at 1st Colonial Grill before attempting Level 3 Volcano heat."
+    ];
+  } else if (dLower.includes("tagaytay")) {
+    overview = `Scenic ridge weekend escape overlooking Taal Crater Lake, savoring steaming pots of bone marrow Bulalo at Mahogany Market, and relaxing in boutique organic farm cafes.`;
+    tips = [
+      "Easily accessible via frequent buses from Metro Manila (PITX Terminal) via CAVITEX in 1.5 to 2 hours.",
+      "Head up to the second floor of Mahogany Market for the freshest, most authentic beef Bulalo in town.",
+      "Buy warm Buko Pie fresh from the oven at Cecilia’s or original roadside Aguinaldo Highway bakeries."
+    ];
   }
 
   // Generate day plan
@@ -1035,6 +1063,9 @@ Return ONLY a JSON array of category objects:
 app.get("/api/health", (_req: Request, res: Response) => {
   res.json({ status: "ok", app: "Byahedor", version: "1.0.0" });
 });
+
+// Serve generated assets statically
+app.use("/src/assets", express.static(path.join(process.cwd(), "src", "assets")));
 
 // Vite Middleware / Static serving
 async function startServer() {

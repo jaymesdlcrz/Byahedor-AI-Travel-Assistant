@@ -381,6 +381,9 @@ export const TripPlannerView: React.FC<TripPlannerViewProps> = ({
               alt={currentPlan.destination}
               className="absolute inset-0 w-full h-full object-cover opacity-35"
               referrerPolicy="no-referrer"
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = 'https://upload.wikimedia.org/wikipedia/commons/4/45/Cloud_9_Boardwalk%2C_Siargao.jpg';
+              }}
             />
             <div className="relative z-10 p-5 sm:p-6 space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-2.5">
