@@ -21,13 +21,27 @@ import {
   Ship,
   UtensilsCrossed,
   Lightbulb,
-  ChevronDown
+  ChevronDown,
+  Paperclip,
+  FileText,
+  Mic,
+  MicOff,
+  UploadCloud,
+  AlertCircle
 } from 'lucide-react';
-import { ChatMessage } from '../types';
+import { ChatMessage, ChatAttachment } from '../types';
 
 interface AiChatViewProps {
   initialPrompt?: string;
   onStartPlanning: (destinationName?: string) => void;
+}
+
+interface LocalAttachedFile {
+  name: string;
+  type: string;
+  size: number;
+  base64: string;
+  previewUrl?: string;
 }
 
 const INITIAL_MESSAGES: ChatMessage[] = [
@@ -37,6 +51,10 @@ const INITIAL_MESSAGES: ChatMessage[] = [
     text: `Mabuhay! 🌴 I'm **Byahedor**, your friendly AI Philippine travel companion!
 
 Whether you're looking for secret beaches in **Palawan**, planning a surfing trip to **Siargao**, budgeting for **Cebu canyoneering**, or craving authentic **Bacolod chicken inasal**, I'm here to guide you every step of the way!
+
+✨ **New features available:**
+- 📎 **Upload Travel Files:** Share photos of landmarks to identify them, carinderia menus to translate, or flight/ferry e-tickets and itineraries to analyze.
+- 🎙️ **Voice Speech-to-Text:** Tap the microphone icon to speak your travel questions naturally in English, Filipino, or Bisaya!
 
 How can I help you plan your next *byahe* today? (You can chat with me in English, Tagalog, or Bisaya!)`,
     timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
@@ -95,6 +113,17 @@ export const AiChatView: React.FC<AiChatViewProps> = ({
   const [showPrompts, setShowPrompts] = useState(false);
   const [userHasScrolledUp, setUserHasScrolledUp] = useState(false);
 
+  // File upload state
+  const [attachedFile, setAttachedFile] = useState<LocalAttachedFile | null>(null);
+  const [fileError, setFileError] = useState<string | null>(null);
+  const [isDraggingOver, setIsDraggingOver] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Speech to text state
+  const [isListening, setIsListening] = useState(false);
+  const [speechError, setSpeechError] = useState<string | null>(null);
+  const recognitionRef = useRef<any>(null);
+
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -104,7 +133,7 @@ export const AiChatView: React.FC<AiChatViewProps> = ({
     localStorage.setItem('byahedor_chat_history', JSON.stringify(messages));
   }, [messages]);
 
-  // FIX: Continuous Auto-scroll that MOVES synchronously with the message body
+  // Continuous Auto-scroll that moves with the stream
   useEffect(() => {
     if (!scrollContainerRef.current) return;
     if (!userHasScrolledUp || isTyping) {
@@ -140,6 +169,159 @@ export const AiChatView: React.FC<AiChatViewProps> = ({
     }
   }, [inputPrompt]);
 
+  // Clean up SpeechRecognition on unmount
+  useEffect(() => {
+    return () => {
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.stop();
+        } catch {}
+      }
+    };
+  }, []);
+
+  // Process file upload
+  const processSelectedFile = (file: File) => {
+    if (!file) return;
+
+    // Check size limit: 20MB
+    if (file.size > 20 * 1024 * 1024) {
+      setFileError('File size exceeds 20MB limit. Please upload a smaller travel photo or document.');
+      setTimeout(() => setFileError(null), 4000);
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      const commaIdx = result.indexOf(',');
+      const base64Data = commaIdx !== -1 ? result.substring(commaIdx + 1) : result;
+      const previewUrl = file.type.startsWith('image/') ? result : undefined;
+
+      setAttachedFile({
+        name: file.name,
+        type: file.type || 'application/octet-stream',
+        size: file.size,
+        base64: base64Data,
+        previewUrl
+      });
+      setFileError(null);
+    };
+    reader.onerror = () => {
+      setFileError('Failed to read file. Please try again.');
+      setTimeout(() => setFileError(null), 4000);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      processSelectedFile(e.target.files[0]);
+    }
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  // Drag and Drop
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!isDraggingOver) setIsDraggingOver(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingOver(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingOver(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      processSelectedFile(e.dataTransfer.files[0]);
+    }
+  };
+
+  // Speech to Text Toggle
+  const toggleSpeechRecognition = () => {
+    if (isListening) {
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.stop();
+        } catch {}
+      }
+      setIsListening(false);
+      return;
+    }
+
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      setSpeechError('Voice dictation is supported in Chrome, Edge, and Safari browsers.');
+      setTimeout(() => setSpeechError(null), 4000);
+      return;
+    }
+
+    try {
+      const recognition = new SpeechRecognition();
+      recognitionRef.current = recognition;
+      recognition.continuous = false;
+      recognition.interimResults = true;
+
+      // Select speech acoustic model based on chosen dialect
+      if (selectedLanguage === 'Filipino') {
+        recognition.lang = 'fil-PH';
+      } else if (selectedLanguage === 'Bisaya') {
+        recognition.lang = 'fil-PH';
+      } else {
+        recognition.lang = 'en-PH';
+      }
+
+      recognition.onstart = () => {
+        setIsListening(true);
+        setSpeechError(null);
+      };
+
+      recognition.onresult = (event: any) => {
+        let transcript = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          transcript += event.results[i][0].transcript;
+        }
+        if (transcript) {
+          setInputPrompt(transcript);
+          if (textareaRef.current) {
+            textareaRef.current.style.height = 'auto';
+            textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 96)}px`;
+          }
+        }
+      };
+
+      recognition.onerror = (event: any) => {
+        console.warn('Speech recognition event:', event.error);
+        if (event.error === 'not-allowed') {
+          setSpeechError('Microphone permission was denied. Please allow microphone access in your browser.');
+        } else if (event.error !== 'no-speech') {
+          setSpeechError(`Voice input error: ${event.error}`);
+        }
+        setIsListening(false);
+        setTimeout(() => setSpeechError(null), 4000);
+      };
+
+      recognition.onend = () => {
+        setIsListening(false);
+      };
+
+      recognition.start();
+    } catch (err: any) {
+      console.error('Failed to start speech recognition:', err);
+      setSpeechError('Could not start microphone voice recognition.');
+      setIsListening(false);
+      setTimeout(() => setSpeechError(null), 4000);
+    }
+  };
+
   // Helper to detect mentioned Philippine destinations
   const detectMentionedDestination = (text: string): string | null => {
     for (const dest of KNOWN_DESTINATIONS) {
@@ -160,20 +342,32 @@ export const AiChatView: React.FC<AiChatViewProps> = ({
   };
 
   const handleSendMessage = async (customText?: string) => {
-    const textToSend = (customText || inputPrompt).trim();
-    if (!textToSend || isTyping) return;
+    const rawText = (customText || inputPrompt).trim();
+    if ((!rawText && !attachedFile) || isTyping) return;
+
+    const fileToUpload = attachedFile;
+    const finalPrompt = rawText || (fileToUpload?.type.startsWith('image/')
+      ? 'Please identify and analyze this travel photo, tell me where it is in the Philippines, and provide recommendations.'
+      : 'Please review this uploaded travel document, extract key itinerary/booking details, flight/ferry numbers, costs in PHP, and advise me.');
 
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
     }
     setSpeakingId(null);
     setUserHasScrolledUp(false);
+    setAttachedFile(null); // Clear active attachment pill once sent
 
     const userMsg: ChatMessage = {
       id: `user-${Date.now()}`,
       sender: 'user',
-      text: textToSend,
+      text: finalPrompt,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      attachment: fileToUpload ? {
+        name: fileToUpload.name,
+        type: fileToUpload.type,
+        size: fileToUpload.size,
+        previewUrl: fileToUpload.previewUrl
+      } : undefined
     };
 
     const aiMsgId = `ai-${Date.now()}`;
@@ -212,11 +406,17 @@ export const AiChatView: React.FC<AiChatViewProps> = ({
           'Accept': 'text/event-stream'
         },
         body: JSON.stringify({
-          message: textToSend,
+          message: finalPrompt,
           messages: conversationHistory,
           history: conversationHistory.slice(-8),
           language: selectedLanguage,
-          stream: true
+          stream: true,
+          file: fileToUpload ? {
+            name: fileToUpload.name,
+            mimeType: fileToUpload.type,
+            data: fileToUpload.base64,
+            size: fileToUpload.size
+          } : undefined
         }),
         signal: controller.signal
       });
@@ -334,19 +534,6 @@ export const AiChatView: React.FC<AiChatViewProps> = ({
     }
   };
 
-  const handleRegenerate = (msgIndex: number) => {
-    let targetUserPrompt = '';
-    for (let i = msgIndex - 1; i >= 0; i--) {
-      if (messages[i].sender === 'user') {
-        targetUserPrompt = messages[i].text;
-        break;
-      }
-    }
-    if (targetUserPrompt) {
-      handleSendMessage(targetUserPrompt);
-    }
-  };
-
   const handleClearHistory = () => {
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
@@ -354,6 +541,13 @@ export const AiChatView: React.FC<AiChatViewProps> = ({
     setSpeakingId(null);
     setMessages(INITIAL_MESSAGES);
     localStorage.removeItem('byahedor_chat_history');
+  };
+
+  const handleRegenerate = (index: number) => {
+    const userMsg = messages[index - 1];
+    if (userMsg && userMsg.sender === 'user') {
+      handleSendMessage(userMsg.text);
+    }
   };
 
   const handleCopyMessage = (id: string, text: string) => {
@@ -372,13 +566,16 @@ export const AiChatView: React.FC<AiChatViewProps> = ({
     }
 
     window.speechSynthesis.cancel();
-    const cleanText = text
-      .replace(/[#*`_~>[\]()]/g, '')
-      .replace(/\n+/g, ' ');
-
+    const cleanText = text.replace(/[*#_`~[\]]/g, '').trim();
     const utterance = new SpeechSynthesisUtterance(cleanText);
+
+    if (selectedLanguage === 'Filipino') {
+      utterance.lang = 'fil-PH';
+    } else {
+      utterance.lang = 'en-US';
+    }
+
     utterance.rate = 1.0;
-    utterance.pitch = 1.0;
     utterance.onend = () => setSpeakingId(null);
     utterance.onerror = () => setSpeakingId(null);
 
@@ -393,8 +590,20 @@ export const AiChatView: React.FC<AiChatViewProps> = ({
   return (
     <div 
       id="byahedor-ai-chat-view" 
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
       className="flex-1 min-h-0 flex flex-col w-full h-full bg-white dark:bg-[#0f233a] rounded-none sm:rounded-2xl lg:rounded-3xl border-0 sm:border border-[#E4E9F0] dark:border-slate-800 shadow-none sm:shadow-sm overflow-hidden relative"
     >
+      {/* Drag & Drop Visual Overlay */}
+      {isDraggingOver && (
+        <div className="absolute inset-0 z-50 bg-[#087EA4]/20 backdrop-blur-xs border-2 border-dashed border-[#087EA4] flex flex-col items-center justify-center text-[#087EA4] dark:text-white p-6 space-y-2 pointer-events-none animate-fadeIn">
+          <UploadCloud className="w-12 h-12 animate-bounce" />
+          <p className="font-bold text-sm">Drop travel photos, tickets, or itineraries here</p>
+          <p className="text-xs text-slate-500 dark:text-slate-300">Byahedor AI will analyze the details for your trip</p>
+        </div>
+      )}
+
       {/* 1. Cohesive Header Bar */}
       <div className="px-3.5 py-2.5 sm:px-4 sm:py-3 border-b border-[#E4E9F0] dark:border-slate-800/80 bg-slate-50/60 dark:bg-[#071728]/60 backdrop-blur-md flex items-center justify-between shrink-0">
         <div className="flex items-center gap-2 min-w-0">
@@ -409,7 +618,7 @@ export const AiChatView: React.FC<AiChatViewProps> = ({
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" title="Live" />
             </div>
             <p className="text-[10px] text-[#627D98] dark:text-slate-400 truncate">
-              Island guide & budget concierge
+              Island guide, vision & voice concierge
             </p>
           </div>
         </div>
@@ -444,7 +653,7 @@ export const AiChatView: React.FC<AiChatViewProps> = ({
         </div>
       </div>
 
-      {/* 2. Scrollable Messages Body - Continuous Real-Time Move */}
+      {/* 2. Scrollable Messages Body */}
       <div 
         ref={scrollContainerRef}
         onScroll={handleScroll}
@@ -466,7 +675,7 @@ export const AiChatView: React.FC<AiChatViewProps> = ({
                 </div>
               )}
 
-              {/* Natural Content Width - Eliminates awkward giant stretching */}
+              {/* Natural Content Width */}
               <div
                 className={`rounded-2xl transition-all ${
                   isAI
@@ -575,7 +784,29 @@ export const AiChatView: React.FC<AiChatViewProps> = ({
                       )}
                     </div>
                   ) : (
-                    <p className="whitespace-pre-wrap">{msg.text}</p>
+                    <div className="space-y-2">
+                      {/* Attached File Preview inside User Bubble */}
+                      {msg.attachment && (
+                        <div className="rounded-xl overflow-hidden bg-black/20 p-1.5 border border-white/20 max-w-xs">
+                          {msg.attachment.type.startsWith('image/') && msg.attachment.previewUrl ? (
+                            <img
+                              src={msg.attachment.previewUrl}
+                              alt={msg.attachment.name}
+                              className="rounded-lg max-h-48 object-cover w-full shadow-xs"
+                            />
+                          ) : (
+                            <div className="flex items-center gap-2 p-1.5 text-white text-xs">
+                              <FileText className="w-4 h-4 shrink-0 text-white/80" />
+                              <div className="min-w-0">
+                                <span className="truncate font-semibold block leading-tight">{msg.attachment.name}</span>
+                                <span className="text-[10px] text-white/70">({Math.round(msg.attachment.size / 1024)} KB)</span>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      <p className="whitespace-pre-wrap">{msg.text}</p>
+                    </div>
                   )}
                 </div>
 
@@ -671,6 +902,55 @@ export const AiChatView: React.FC<AiChatViewProps> = ({
 
       {/* 3. Integrated Bottom Dock: Stationary Locked Typing Bar */}
       <div className="px-2.5 py-2 sm:px-4 sm:py-2.5 bg-white/95 dark:bg-[#0b1c2e]/95 backdrop-blur-md border-t border-slate-200/80 dark:border-slate-800 shrink-0 space-y-1.5 z-30">
+        {/* Error notification banner for speech or file upload */}
+        {(speechError || fileError) && (
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/50 text-rose-600 dark:text-rose-400 text-xs font-medium animate-fadeIn">
+            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+            <span className="truncate">{speechError || fileError}</span>
+          </div>
+        )}
+
+        {/* Attached File Preview Card */}
+        {attachedFile && (
+          <div className="flex items-center gap-2 p-2 rounded-xl bg-slate-100 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 shadow-2xs animate-fadeIn">
+            {attachedFile.previewUrl ? (
+              <img
+                src={attachedFile.previewUrl}
+                alt={attachedFile.name}
+                className="w-10 h-10 object-cover rounded-lg border border-slate-300 dark:border-slate-600 shrink-0"
+              />
+            ) : (
+              <div className="w-10 h-10 rounded-lg bg-[#087EA4]/10 dark:bg-[#087EA4]/20 text-[#087EA4] dark:text-[#4DB8E8] flex items-center justify-center shrink-0">
+                <FileText className="w-5 h-5" />
+              </div>
+            )}
+            <div className="flex-1 min-w-0 text-left">
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs font-bold text-[#102A43] dark:text-white truncate">
+                  {attachedFile.name}
+                </span>
+                <span className="text-[10px] text-slate-400 shrink-0">
+                  ({Math.round(attachedFile.size / 1024)} KB)
+                </span>
+              </div>
+              <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
+                {attachedFile.type.startsWith('image/')
+                  ? 'Travel photo ready — Byahedor will identify landmark/food/beach'
+                  : 'Document ready — Byahedor will extract itinerary & booking details'}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setAttachedFile(null)}
+              className="w-7 h-7 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center transition-colors shrink-0"
+              title="Remove file"
+              aria-label="Remove attached file"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
+
         {/* Toggleable Quick Inspiration Chips */}
         {showPrompts && (
           <div className="space-y-1 pb-1 animate-fadeIn">
@@ -716,7 +996,7 @@ export const AiChatView: React.FC<AiChatViewProps> = ({
           </div>
         )}
 
-        {/* Cohesive Stationary Typing Bar ("makikita yung pinagtytypan mo") */}
+        {/* Cohesive Stationary Typing Bar */}
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -724,11 +1004,36 @@ export const AiChatView: React.FC<AiChatViewProps> = ({
           }}
           className="bg-slate-50 dark:bg-slate-800/90 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl sm:rounded-2xl border border-slate-300/80 dark:border-slate-700 focus-within:border-[#087EA4] dark:focus-within:border-[#4DB8E8] focus-within:bg-white dark:focus-within:bg-[#0f233a] shadow-2xs transition-all flex items-center gap-1.5 sm:gap-2 relative z-20"
         >
+          {/* Hidden File Input */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*,application/pdf,text/plain,text/csv,.md,.json"
+            onChange={handleFileChange}
+            className="hidden"
+            id="chat-file-upload-input"
+          />
+
+          {/* Paperclip File Upload Button */}
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center transition-all shrink-0 ${
+              attachedFile
+                ? 'bg-[#087EA4] text-white shadow-2xs'
+                : 'text-slate-400 hover:text-[#087EA4] hover:bg-slate-100 dark:hover:bg-slate-800'
+            }`}
+            title="Upload travel photo, ticket, or itinerary document"
+            aria-label="Upload file"
+          >
+            <Paperclip className="w-4 h-4" />
+          </button>
+
           {/* Quick Suggestions Toggle Icon */}
           <button
             type="button"
             onClick={() => setShowPrompts(!showPrompts)}
-            className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all shrink-0 ${
+            className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center transition-all shrink-0 ${
               showPrompts
                 ? 'bg-[#087EA4] text-white'
                 : 'text-slate-400 hover:text-[#087EA4] hover:bg-slate-100 dark:hover:bg-slate-800'
@@ -752,10 +1057,21 @@ export const AiChatView: React.FC<AiChatViewProps> = ({
                 handleSendMessage();
               }
             }}
-            placeholder={`Ask Byahedor in ${selectedLanguage}...`}
-            className="flex-1 bg-transparent py-1 px-1 text-[16px] sm:text-sm font-medium text-[#102A43] dark:text-white placeholder-[#9FB3C8] outline-none resize-none min-h-[38px] max-h-24 leading-snug min-w-0"
+            placeholder={
+              isListening
+                ? 'Listening... speak your travel question now'
+                : attachedFile
+                ? 'Add notes for this file, or press send to analyze...'
+                : `Ask Byahedor in ${selectedLanguage}...`
+            }
+            className={`flex-1 bg-transparent py-1 px-1 text-[16px] sm:text-sm font-medium outline-none resize-none min-h-[38px] max-h-24 leading-snug min-w-0 transition-colors ${
+              isListening
+                ? 'text-rose-600 dark:text-rose-400 placeholder-rose-400 dark:placeholder-rose-500'
+                : 'text-[#102A43] dark:text-white placeholder-[#9FB3C8]'
+            }`}
           />
 
+          {/* Clear text button */}
           {inputPrompt.trim() && !isTyping && (
             <button
               type="button"
@@ -770,6 +1086,26 @@ export const AiChatView: React.FC<AiChatViewProps> = ({
             </button>
           )}
 
+          {/* Speech-to-Text Microphone Button */}
+          <button
+            type="button"
+            onClick={toggleSpeechRecognition}
+            className={`w-8 h-8 sm:w-8 sm:h-8 rounded-xl flex items-center justify-center transition-all shrink-0 ${
+              isListening
+                ? 'bg-rose-500 text-white animate-pulse ring-4 ring-rose-500/25 shadow-sm'
+                : 'text-slate-400 hover:text-[#087EA4] dark:hover:text-[#4DB8E8] hover:bg-slate-100 dark:hover:bg-slate-800'
+            }`}
+            title={isListening ? 'Listening... click to stop' : `Voice speech-to-text in ${selectedLanguage}`}
+            aria-label={isListening ? 'Stop voice recognition' : 'Start voice recognition'}
+          >
+            {isListening ? (
+              <MicOff className="w-4 h-4" />
+            ) : (
+              <Mic className="w-4 h-4" />
+            )}
+          </button>
+
+          {/* Send / Stop Generation Button */}
           {isTyping ? (
             <button
               type="button"
@@ -783,7 +1119,7 @@ export const AiChatView: React.FC<AiChatViewProps> = ({
             <button
               type="submit"
               id="ai-chat-send-btn"
-              disabled={!inputPrompt.trim()}
+              disabled={!inputPrompt.trim() && !attachedFile}
               className="w-9 h-9 min-w-[36px] min-h-[36px] rounded-xl bg-gradient-to-r from-[#087EA4] to-[#39A96B] hover:brightness-110 text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-xs flex items-center justify-center shrink-0 active:scale-95"
               aria-label="Send message"
             >

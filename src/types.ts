@@ -108,6 +108,14 @@ export interface LocalDish {
   dietaryNotes?: string;
 }
 
+export interface ChatAttachment {
+  name: string;
+  type: string;
+  size: number;
+  previewUrl?: string;
+  base64?: string;
+}
+
 export interface ChatMessage {
   id: string;
   sender: 'user' | 'ai';
@@ -116,6 +124,7 @@ export interface ChatMessage {
   isStreaming?: boolean;
   tripData?: TripPlan;
   quickReplies?: string[];
+  attachment?: ChatAttachment;
 }
 
 export interface UserPreferences {

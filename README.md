@@ -4,10 +4,26 @@
 
 ---
 
+## 📖 Description
+
+Across the **7,641 islands of the Philippines**, travel is an exhilarating adventure—yet navigating multi-leg inter-island logistics, unpredictable ferry schedules, localized jeepney routes, and diverse regional dialects can be daunting for both international tourists and local weekenders (*barkadas*, solo backpackers, and families).
+
+Traditional travel apps often assume uniform highway networks, standardized public transit, and foreign currency benchmarks, leading to impractical itineraries or inaccurate expense estimates. **Byahedor bridges this gap** by serving as an authentic, culturally aware AI travel companion:
+
+- **Culturally Rooted Intelligence**: Speaks fluent English, Tagalog/Filipino, and Bisaya, understanding local colloquialisms, regional etiquette, and Filipino hospitality customs (*Bayanihan*, *Pasalubong*).
+- **Multimodal Visual Understanding**: Enables travelers to photograph confusing carinderia menus, historical marker plaques, ferry boarding passes, or mystery landmarks for immediate context and practical advice.
+- **Voice-Enabled Commuting**: Features real-time speech-to-text recognition so travelers can ask questions hands-free while on the go—whether sitting in a breezy tricycle or waiting at a crowded pier.
+- **Realistic Philippine Transit & Cost Modeling**: Accurately accounts for pumpboat tides, environmental fees, habal-habal tariffs, and local terminal fees, ensuring travel itineraries are practical rather than rushed.
+- **Eco-Conscious Tourism**: Recommends DOT-accredited local guides, community-run boat cooperatives, and Leave No Trace (LNT) guidelines to protect marine sanctuaries and indigenous lands.
+
+---
+
 ## ✨ Key Features
 
 - **🤖 AI Travel Concierge (`/api/chat`)**:
-  - Real-time Server-Sent Events (SSE) streaming.
+  - Real-time Server-Sent Events (SSE) streaming with multi-turn context memory.
+  - **📎 Multimodal File & Image Uploads**: Upload landmark photos for instant identification, carinderia menus for dialect translation, flight/ferry e-tickets for itinerary scheduling, and expense receipts. Drag-and-drop or file picker with live thumbnail previews.
+  - **🎙️ Speech-to-Text Voice Recognition**: Hands-free voice input with live acoustic transcription supporting English (`en-PH`), Filipino (`fil-PH`), and Bisaya with real-time waveform indicator.
   - Multi-dialect fluency: seamlessly converses in **English**, **Filipino / Tagalog** ("*Tara, byahe tayo!*"), and **Bisaya** ("*Maayong adlaw!*").
   - Practical local advice: pumpboat schedules, environmental fees, cash/ATM cautions, and street-food recommendations.
   - Quick action chips, speech synthesis (listen to advice), copy-to-clipboard, and regenerate options.

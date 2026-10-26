@@ -13,7 +13,8 @@ const envPort = process.env.PORT && process.env.PORT !== "8080" ? parseInt(proce
 const defaultAppPort = process.env.DEFAULT_APP_PORT ? parseInt(process.env.DEFAULT_APP_PORT, 10) : null;
 const PORT = argPort || defaultAppPort || envPort || 3000;
 
-app.use(express.json());
+app.use(express.json({ limit: "25mb" }));
+app.use(express.urlencoded({ extended: true, limit: "25mb" }));
 
 function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
   return Promise.race([
@@ -516,8 +517,13 @@ I can assist you with:
 Where are you dreaming of traveling next? (e.g., *Siargao, Palawan, Cebu, Batanes, Bohol, Vigan, Siquijor, Davao, Iloilo*) — *Tara, byahe tayo!* 🌴🌊`;
 }
 
-// Helper: Format history into valid Gemini multiturn alternating contents
-function formatGeminiContents(history: any[] | undefined, messages: any[] | undefined, latestMessage: string): any[] {
+// Helper: Format history into valid Gemini multiturn alternating contents, with optional file attachment
+function formatGeminiContents(
+  history: any[] | undefined, 
+  messages: any[] | undefined, 
+  latestMessage: string,
+  file?: { mimeType: string; data: string; name?: string }
+): any[] {
   const rawTurns: { role: 'user' | 'model'; text: string }[] = [];
 
   const sourceList = Array.isArray(history) && history.length > 0 
@@ -545,11 +551,21 @@ function formatGeminiContents(history: any[] | undefined, messages: any[] | unde
   }
 
   if (rawTurns.length === 0) {
-    return [{ role: 'user', parts: [{ text: latestTrimmed || 'Mabuhay Byahedor! What Philippine travel adventures can you recommend?' }] }];
+    const fallbackText = latestTrimmed || (file ? 'Please analyze this uploaded Philippine travel file.' : 'Mabuhay Byahedor! What Philippine travel adventures can you recommend?');
+    const parts: any[] = [{ text: fallbackText }];
+    if (file && file.data && file.mimeType) {
+      parts.unshift({
+        inlineData: {
+          mimeType: file.mimeType,
+          data: file.data
+        }
+      });
+    }
+    return [{ role: 'user', parts }];
   }
 
   // Enforce strict alternation between 'user' and 'model'
-  const alternating: { role: 'user' | 'model'; parts: { text: string }[] }[] = [];
+  const alternating: { role: 'user' | 'model'; parts: any[] }[] = [];
   for (const turn of rawTurns) {
     const last = alternating[alternating.length - 1];
     if (last && last.role === turn.role) {
@@ -564,12 +580,25 @@ function formatGeminiContents(history: any[] | undefined, messages: any[] | unde
     alternating.push({ role: 'user', parts: [{ text: latestTrimmed || 'Please advise.' }] });
   }
 
+  // If a file is uploaded, attach it as an inlineData part to the final user turn
+  if (file && file.data && file.mimeType) {
+    const lastUserTurn = alternating[alternating.length - 1];
+    if (lastUserTurn && lastUserTurn.role === 'user') {
+      lastUserTurn.parts.unshift({
+        inlineData: {
+          mimeType: file.mimeType,
+          data: file.data
+        }
+      });
+    }
+  }
+
   return alternating;
 }
 
-// 1. Chat Endpoint (Supports both streaming SSE and standard JSON)
+// 1. Chat Endpoint (Supports both streaming SSE and standard JSON with file attachments)
 app.post("/api/chat", async (req: Request, res: Response) => {
-  const { message, messages, history, language, userPreferences, destinationContext, stream } = req.body;
+  const { message, messages, history, language, userPreferences, destinationContext, stream, file } = req.body;
   const isStream = stream === true || req.headers.accept?.includes("text/event-stream") || req.query.stream === "true";
 
   const ai = getAIClient();
@@ -577,7 +606,8 @@ app.post("/api/chat", async (req: Request, res: Response) => {
   let contextPrompt = `${BYAHEDOR_SYSTEM_INSTRUCTION}
 
 You are responding to the user in their requested dialect or language (${currentLang}).
-Always maintain warm Filipino hospitality (Mabuhay!), share realistic cost estimates in Philippine Pesos (₱), give safety and transit hacks (bangka, jeepney, tricycle, ferries), and format your response cleanly with clear markdown headings, bullet points, and numbered lists.`;
+Always maintain warm Filipino hospitality (Mabuhay!), share realistic cost estimates in Philippine Pesos (₱), give safety and transit hacks (bangka, jeepney, tricycle, ferries), and format your response cleanly with clear markdown headings, bullet points, and numbered lists.
+If the user uploads an image, photo, ticket, receipt, or travel document, analyze it thoroughly: identify Philippine landmarks, translate menus, extract itinerary or boarding times, check prices in PHP, or verify travel requirements.`;
 
   if (userPreferences) {
     contextPrompt += `\nUser Preferences: Travel style: ${userPreferences.travelStyle || 'flexible'}, Budget tier: ${userPreferences.budgetTier || 'moderate'}.`;
@@ -595,8 +625,14 @@ Always maintain warm Filipino hospitality (Mabuhay!), share realistic cost estim
     latestUserMessage = last.content || last.text || "";
   }
 
-  // Sanitize and format history into valid Gemini alternating multiturn contents
-  const contents = formatGeminiContents(history, messages, latestUserMessage);
+  if (!latestUserMessage && file) {
+    latestUserMessage = file.mimeType?.startsWith("image/")
+      ? "Please analyze this Philippine travel photo, identify the landmark, beach, island, or dish, and give me practical travel advice."
+      : "Please review this uploaded Philippine travel document, extract key itinerary/booking details, flight/ferry numbers, costs in PHP, and advise me.";
+  }
+
+  // Sanitize and format history into valid Gemini alternating multiturn contents with optional file
+  const contents = formatGeminiContents(history, messages, latestUserMessage, file);
 
   // Handle Server-Sent Events (SSE) Streaming
   if (isStream) {
