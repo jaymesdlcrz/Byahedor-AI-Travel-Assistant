@@ -171,7 +171,7 @@ export default function App() {
   });
 
   useEffect(() => {
-    const timer = setTimeout(() => setLoadingApp(false), 800);
+    const timer = setTimeout(() => setLoadingApp(false), 1200);
     return () => clearTimeout(timer);
   }, []);
 
