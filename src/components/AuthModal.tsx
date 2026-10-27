@@ -17,7 +17,6 @@ import {
   PlaneTakeoff,
   Compass,
   Heart,
-  Zap,
   Check
 } from 'lucide-react';
 import { useAuth, AuthModalMode } from '../firebase/context';
@@ -31,7 +30,6 @@ export const AuthModal: React.FC = () => {
     signInWithGoogle, 
     signInWithEmail, 
     signUpWithEmail, 
-    signInDemoAccount,
     resetPassword, 
     authError, 
     clearAuthError 
@@ -46,7 +44,6 @@ export const AuthModal: React.FC = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGoogleSubmitting, setIsGoogleSubmitting] = useState(false);
-  const [isDemoSubmitting, setIsDemoSubmitting] = useState(false);
   const [resetSent, setResetSent] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -83,19 +80,6 @@ export const AuthModal: React.FC = () => {
       // Error handled in context
     } finally {
       setIsGoogleSubmitting(false);
-    }
-  };
-
-  const handleDemoLogin = async () => {
-    clearAuthError();
-    setValidationError(null);
-    setIsDemoSubmitting(true);
-    try {
-      await signInDemoAccount();
-    } catch {
-      // Error handled in context
-    } finally {
-      setIsDemoSubmitting(false);
     }
   };
 
@@ -236,29 +220,6 @@ export const AuthModal: React.FC = () => {
 
         {/* Modal Body */}
         <div className="p-5 sm:p-6 space-y-4">
-          {/* Quick 1-Click Demo Option */}
-          <div className="mb-2">
-            <button
-              type="button"
-              onClick={handleDemoLogin}
-              disabled={isDemoSubmitting || isSubmitting || isGoogleSubmitting}
-              className="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/40 dark:to-orange-950/30 border border-amber-300 dark:border-amber-800/60 hover:border-amber-400 text-amber-800 dark:text-amber-200 text-xs font-bold transition-all flex items-center justify-between group active:scale-98 cursor-pointer shadow-2xs"
-              title="Instant one-click login as Juan dela Cruz (VIP Demo)"
-            >
-              <div className="flex items-center gap-2">
-                <Zap className="w-4 h-4 text-amber-500 shrink-0 fill-amber-400" />
-                <span>⚡ <strong>Quick Preview:</strong> 1-Click Demo Account</span>
-              </div>
-              {isDemoSubmitting ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-600" />
-              ) : (
-                <span className="text-[11px] underline group-hover:text-amber-900 dark:group-hover:text-white">
-                  Sign in as Juan →
-                </span>
-              )}
-            </button>
-          </div>
-
           {/* Validation Error Banner */}
           {validationError && (
             <div className="p-3 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 text-amber-800 dark:text-amber-200 text-xs flex items-start gap-2.5 animate-shake">
@@ -314,7 +275,7 @@ export const AuthModal: React.FC = () => {
               <button
                 type="button"
                 onClick={handleGoogleSignIn}
-                disabled={isGoogleSubmitting || isSubmitting || isDemoSubmitting}
+                disabled={isGoogleSubmitting || isSubmitting}
                 className="w-full min-h-[46px] px-4 py-2.5 rounded-2xl bg-white dark:bg-[#132c4a] hover:bg-slate-50 dark:hover:bg-[#183659] text-slate-700 dark:text-slate-100 font-bold text-xs sm:text-sm border border-slate-200 dark:border-slate-700 shadow-xs flex items-center justify-center gap-3 transition-all hover:shadow-sm active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed group cursor-pointer"
               >
                 {isGoogleSubmitting ? (
@@ -538,7 +499,7 @@ export const AuthModal: React.FC = () => {
             {/* Submit Button */}
             <button
               type="submit"
-              disabled={isSubmitting || isGoogleSubmitting || isDemoSubmitting}
+              disabled={isSubmitting || isGoogleSubmitting}
               className="w-full min-h-[44px] px-4 py-2.5 rounded-2xl bg-[#087EA4] hover:bg-[#076c8c] text-white font-bold text-xs sm:text-sm shadow-md transition-all flex items-center justify-center gap-2 active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
             >
               {isSubmitting ? (

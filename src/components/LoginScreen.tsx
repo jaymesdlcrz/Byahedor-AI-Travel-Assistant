@@ -18,7 +18,6 @@ import {
   Ship,
   Sun,
   Moon,
-  Zap,
   Check
 } from 'lucide-react';
 import { useAuth } from '../firebase/context';
@@ -41,7 +40,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     signInWithGoogle, 
     signInWithEmail, 
     signUpWithEmail, 
-    signInDemoAccount,
     resetPassword, 
     authError, 
     clearAuthError 
@@ -57,7 +55,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   const [agreeTerms, setAgreeTerms] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGoogleSubmitting, setIsGoogleSubmitting] = useState(false);
-  const [isDemoSubmitting, setIsDemoSubmitting] = useState(false);
   const [resetSent, setResetSent] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -72,19 +69,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
       // Errors handled in context
     } finally {
       setIsGoogleSubmitting(false);
-    }
-  };
-
-  const handleDemoLogin = async () => {
-    clearAuthError();
-    setValidationError(null);
-    setIsDemoSubmitting(true);
-    try {
-      await signInDemoAccount();
-    } catch {
-      // Errors handled in context
-    } finally {
-      setIsDemoSubmitting(false);
     }
   };
 
@@ -305,29 +289,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
         <div className="w-full lg:w-[460px] shrink-0">
           <div className="bg-white/95 dark:bg-[#0f233a]/95 rounded-3xl p-5 sm:p-7 border border-[#E4E9F0] dark:border-slate-800 shadow-xl backdrop-blur-md relative overflow-hidden">
             
-            {/* Quick 1-Click Demo Option */}
-            <div className="mb-4">
-              <button
-                type="button"
-                onClick={handleDemoLogin}
-                disabled={isDemoSubmitting || isSubmitting || isGoogleSubmitting}
-                className="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/40 dark:to-orange-950/30 border border-amber-300 dark:border-amber-800/60 hover:border-amber-400 text-amber-800 dark:text-amber-200 text-xs font-bold transition-all flex items-center justify-between group active:scale-98 cursor-pointer shadow-2xs"
-                title="Instant one-click login as Juan dela Cruz (VIP Demo)"
-              >
-                <div className="flex items-center gap-2">
-                  <Zap className="w-4 h-4 text-amber-500 shrink-0 fill-amber-400" />
-                  <span>⚡ <strong>Quick Preview:</strong> 1-Click Demo Account</span>
-                </div>
-                {isDemoSubmitting ? (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-600" />
-                ) : (
-                  <span className="text-[11px] underline group-hover:text-amber-900 dark:group-hover:text-white">
-                    Sign in as Juan →
-                  </span>
-                )}
-              </button>
-            </div>
-
             {/* Mode Switch Tabs (Sign In with Email / Create New Account) */}
             {mode !== 'forgot' && (
               <div className="grid grid-cols-2 bg-slate-100 dark:bg-slate-800/80 p-1 rounded-2xl mb-5 text-xs font-bold gap-1">
@@ -421,7 +382,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                   type="button"
                   id="login-screen-google-btn"
                   onClick={handleGoogleSignIn}
-                  disabled={isGoogleSubmitting || isSubmitting || isDemoSubmitting}
+                  disabled={isGoogleSubmitting || isSubmitting}
                   className="w-full min-h-[46px] px-4 py-2.5 rounded-2xl bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/80 border border-slate-300 dark:border-slate-700 text-[#102A43] dark:text-white font-bold text-xs sm:text-sm shadow-2xs hover:shadow-xs transition-all flex items-center justify-center gap-3 active:scale-98 cursor-pointer disabled:opacity-50"
                 >
                   {isGoogleSubmitting ? (
@@ -635,7 +596,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
               <button
                 type="submit"
                 id="login-screen-submit-btn"
-                disabled={isSubmitting || isGoogleSubmitting || isDemoSubmitting}
+                disabled={isSubmitting || isGoogleSubmitting}
                 className="w-full min-h-[46px] py-2.5 px-4 rounded-xl bg-gradient-to-r from-[#087EA4] to-[#0A6C8C] hover:from-[#096d8e] hover:to-[#085a75] text-white text-xs sm:text-sm font-bold shadow-xs hover:shadow-sm transition-all flex items-center justify-center gap-2 active:scale-98 cursor-pointer disabled:opacity-50 mt-2"
               >
                 {isSubmitting ? (
