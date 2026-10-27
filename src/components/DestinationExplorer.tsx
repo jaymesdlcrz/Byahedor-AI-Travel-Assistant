@@ -29,7 +29,7 @@ export const DestinationExplorer: React.FC<DestinationExplorerProps> = ({
   const [activeModalDest, setActiveModalDest] = useState<Destination | null>(null);
 
   const regionTabs = ['All', 'Luzon', 'Visayas', 'Mindanao'];
-  const tagTabs = ['All', 'Beach & Surf', 'Island Hopping', 'Heritage', 'Waterfalls', 'Scenic Hills', 'Wreck Diving'];
+  const tagTabs = ['All', 'Beach & Surf', 'Island Hopping', 'Heritage', 'Nature', 'Waterfalls', 'Culinary'];
 
   const filteredDestinations = DESTINATIONS.filter((d) => {
     const matchesSearch = 

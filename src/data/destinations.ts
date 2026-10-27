@@ -669,5 +669,465 @@ export const DESTINATIONS: Destination[] = [
     ],
     rating: 4.81,
     reviewCount: 590
+  },
+  {
+    id: 'davao-samal',
+    name: 'Davao City & Samal Island',
+    location: 'Davao Region, Southern Mindanao',
+    region: 'Mindanao',
+    tagline: 'Durian Capital, Mount Apo Hiking & Island Garden of Samal',
+    description: 'The sprawling, safe metropolitan hub of Southern Mindanao crowned by the majestic peak of Mount Apo (the Philippines’ highest summit at 2,954m). Just a 10-minute ferry ride across the gulf lies the Island Garden City of Samal, famed for turquoise marine sanctuaries, pearl farms, bat sanctuaries, and powder-white sandbars.',
+    heroImage: '/src/assets/images/davao_samal_1793074899188.jpg',
+    galleryImages: [
+      'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d2/Tuktok_ng_Pilipinas.jpg/1280px-Tuktok_ng_Pilipinas.jpg'
+    ],
+    estimatedDailyBudgetPHP: 2600,
+    bestTimeToVisit: 'December to May (Pleasant weather; typhoon-free zone all year round)',
+    idealDurationDays: 4,
+    tags: ['Island Hopping', 'Wildlife & Nature', 'Mount Apo Trekking', 'Street Food & Durian', 'White Beaches'],
+    coordinates: { lat: 7.1907, lng: 125.4553 },
+    popularActivities: [
+      {
+        title: 'Samal Island Hopping & Coral Snorkeling',
+        description: 'Cruise to Talicud Island, Wishing Island, and giant clam marine sanctuaries in crystal clear azure waters.',
+        costPHP: 1200,
+        duration: '7 hours'
+      },
+      {
+        title: 'Philippine Eagle Center Conservation Sanctuary',
+        description: 'See the magnificent, critically endangered Philippine Eagle (Pithecophaga jefferyi) and native rainforest raptors.',
+        costPHP: 150,
+        duration: '3 hours'
+      },
+      {
+        title: 'Roxas Night Market Street Food & Durian Feast',
+        description: 'Sample charcoal-grilled tuna jaw (panga), chicken isaw, marang fruit, and fresh creamy Puyat durian on the street.',
+        costPHP: 300,
+        duration: '2.5 hours'
+      },
+      {
+        title: 'Monfort Bat Sanctuary Tour',
+        description: 'Marvel at the Guinness World Record colony of over 1.8 million Geoffrey’s Rousette fruit bats in natural cave fissures.',
+        costPHP: 120,
+        duration: '1.5 hours'
+      }
+    ],
+    localSpecialties: ['Grilled Tuna Panga & Belly', 'Sinuglaw (Grilled Pork + Tuna Ceviche)', 'Fresh Puyat & Arancillo Durian', 'Native Pomelo (Sweet Suha)', 'Malagos Artisanal Dark Chocolate'],
+    travelTips: [
+      'Davao is completely outside the Philippine typhoon belt, making it a great destination any month of the year.',
+      'Take the 24/7 barge ferry from Sasa Wharf to Samal Island for just ₱15 passenger fare.',
+      'Try fresh Durian along Magsaysay Park where vendors will gladly choose the perfect creamy fruit for beginners.'
+    ],
+    rating: 4.88,
+    reviewCount: 395
+  },
+  {
+    id: 'surigao-del-sur',
+    name: 'Surigao del Sur & Hinatuan',
+    location: 'Caraga Region, Northeastern Mindanao',
+    region: 'Mindanao',
+    tagline: 'Deep Cobalt Enchanted River & The Niagara of the Philippines',
+    description: 'An enchanting eco-tourism frontier featuring the world-famous Hinatuan Enchanted River—a deep cobalt saltwater subterranean river whose underwater caverns remain unexplored. Down south lies Tinuy-an Falls, an awe-inspiring 95-meter wide 3-tiered curtain waterfall, and the 24 pristine uninhabited islands of Britania.',
+    heroImage: '/src/assets/images/hinatuan_river_1793074914638.jpg',
+    galleryImages: [
+      'https://upload.wikimedia.org/wikipedia/commons/thumb/1/11/Tinuy-an_Falls_in_Bislig.jpg/1280px-Tinuy-an_Falls_in_Bislig.jpg'
+    ],
+    estimatedDailyBudgetPHP: 2500,
+    bestTimeToVisit: 'March to October (Dry and calm seas for island hopping)',
+    idealDurationDays: 3,
+    tags: ['Nature & Eco-Tourism', 'Enchanted Waters', 'Grand Waterfalls', 'Island Hopping', 'Hidden Gem'],
+    coordinates: { lat: 8.4907, lng: 126.2952 },
+    popularActivities: [
+      {
+        title: 'Hinatuan Enchanted River & Fish Feeding Ceremony',
+        description: 'Witness the mystical 12:00 PM fish feeding ritual where schools of silver trevally surface to the sound of the hymn.',
+        costPHP: 100,
+        duration: '3 hours'
+      },
+      {
+        title: 'Tinuy-an Falls Bamboo Rafting in Bislig',
+        description: 'Ride a traditional bamboo raft directly under the thunderous 95-meter wide cascading curtain of water.',
+        costPHP: 150,
+        duration: '3 hours'
+      },
+      {
+        title: 'Britania Group of 24 Islands Tour (San Agustin)',
+        description: 'Island hop to Naked Island, Boslon Island, and Hagonoy Island’s powder-soft white sandbars.',
+        costPHP: 1500,
+        duration: '5 hours'
+      },
+      {
+        title: 'Sibadan Fish Cage & Stingray Sanctuary',
+        description: 'Interact with friendly wild stingrays and dine on freshly harvested mangrove mud crabs.',
+        costPHP: 200,
+        duration: '2 hours'
+      }
+    ],
+    localSpecialties: ['Steamed Mangrove Mud Crabs (Alimango)', 'Fresh Lobster & Tiger Prawns', 'Sayongsong (sticky rice and coconut kakanin)', 'Grilled Kitang & Pompano'],
+    travelTips: [
+      'Fly into Bancasi Airport (BXU) in Butuan or Davao Airport, then hire a private van or take a Bachelor Express bus.',
+      'Swimming directly in the main blue pool of the Enchanted River is prohibited to preserve water clarity; a dedicated swimming lagoon is available 20 meters downstream.',
+      'Hire a licensed Habal-habal motorcycle driver with a DOT safety helmet for seamless transit between falls.'
+    ],
+    rating: 4.93,
+    reviewCount: 312
+  },
+  {
+    id: 'bukidnon',
+    name: 'Bukidnon & Dahilayan Highlands',
+    location: 'Northern Mindanao, Philippines',
+    region: 'Mindanao',
+    tagline: 'Highland Pine Ridges, Vast Pineapple Plains & Pure Alpine Adventure',
+    description: 'The cool mountain heart of Mindanao perched on an elevated plateau between Mount Kitanglad and Mount Kalatungan. Known as the food basket of Mindanao, Bukidnon offers crisp alpine pine breezes, massive Del Monte pineapple fields, adrenaline-pumping mountain ziplines, and sacred monastic sanctuaries.',
+    heroImage: '/src/assets/images/bukidnon_highlands_1793074929527.jpg',
+    galleryImages: [
+      'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c2/Mt._Kalatungan_Sunrise.jpg/1280px-Mt._Kalatungan_Sunrise.jpg'
+    ],
+    estimatedDailyBudgetPHP: 2300,
+    bestTimeToVisit: 'December to May (Crisp cool mornings and bright sunny afternoons)',
+    idealDurationDays: 3,
+    tags: ['Mountain & Highlands', 'Zipline & Adventure', 'Cool Climate', 'Pine Forests', 'Pineapple Farms'],
+    coordinates: { lat: 8.2140, lng: 124.8690 },
+    popularActivities: [
+      {
+        title: 'Dahilayan Adventure Park Ziplines & DropZone',
+        description: 'Fly face-down through lush pine tree canopies on Asia’s longest 840-meter dual zipline at 90 km/h.',
+        costPHP: 600,
+        duration: '4 hours'
+      },
+      {
+        title: 'Del Monte Camp Phillips Pineapple Plantation',
+        description: 'Tour 25,000 hectares of sprawling green pineapple fields and pose with the giant roadside pineapple marker.',
+        costPHP: 50,
+        duration: '2 hours'
+      },
+      {
+        title: 'Monastery of the Transfiguration Pilgrimage',
+        description: 'Visit the peaceful pyramid-shaped church designed by National Artist Leandro Locsin in Malaybalay.',
+        costPHP: 0,
+        duration: '1.5 hours'
+      },
+      {
+        title: 'Communal Ranch Impasug-ong Scenic Horseback Ride',
+        description: 'Ride horses across rolling mountain pastures resembling the New Zealand countryside.',
+        costPHP: 300,
+        duration: '2.5 hours'
+      }
+    ],
+    localSpecialties: ['Sweet Del Monte MD2 Pineapples', 'Bukidnon Grass-fed Beef Steaks', 'Monk’s Blend Premium Coffee', 'Binaki (Steamed Sweet Corn Cake)', 'Wild Mountain Honey'],
+    travelTips: [
+      'Fly into Laguindingan Airport (CGY) in Cagayan de Oro; Bukidnon is a scenic 1.5 to 2-hour drive via Sayre Highway.',
+      'Pack a light windbreaker or fleece jacket; temperatures in Dahilayan can drop to 16°C in the evenings.',
+      'Pick up fresh Monk’s Blend coffee grounds directly from the Monastery of the Transfiguration gift shop.'
+    ],
+    rating: 4.87,
+    reviewCount: 284
+  },
+  {
+    id: 'iloilo-guimaras',
+    name: 'Iloilo & Guimaras Island',
+    location: 'Western Visayas, Philippines',
+    region: 'Visayas',
+    tagline: 'The City of Love, UNESCO Heritage Churches & World’s Sweetest Mangoes',
+    description: 'A charming cultural and culinary capital blessed with Spanish colonial baroque churches like UNESCO World Heritage Miag-ao, European-style Calle Real heritage buildings, and the raw island beauty of Islas de Gigantes sandbars. Across a short 15-minute boat ride lies Guimaras Island, producer of certified sweet carabaos mangoes.',
+    heroImage: '/src/assets/images/iloilo_guimaras_1793074948168.jpg',
+    galleryImages: [
+      'https://upload.wikimedia.org/wikipedia/commons/thumb/5/5f/Miagao_Church_%28Iloilo-Antique_Road%2C_Miagao%2C_Iloilo%3B_04-05-2024%29.jpg/1280px-Miagao_Church_%28Iloilo-Antique_Road%2C_Miagao%2C_Iloilo%3B_04-05-2024%29.jpg'
+    ],
+    estimatedDailyBudgetPHP: 2600,
+    bestTimeToVisit: 'November to May (January features the world-renowned Dinagyang Festival)',
+    idealDurationDays: 4,
+    tags: ['Heritage & UNESCO', 'World’s Sweetest Mangoes', 'Culinary & Batchoy', 'Island Hopping', 'Culture'],
+    coordinates: { lat: 10.7202, lng: 122.5621 },
+    popularActivities: [
+      {
+        title: 'Miag-ao UNESCO Fortress Church Heritage Tour',
+        description: 'Admire the 1797 ochre-colored sandstone facade carved with a coconut tree of life and St. Christopher.',
+        costPHP: 50,
+        duration: '2 hours'
+      },
+      {
+        title: 'Guimaras Island Mango Tour & Beach Hopping',
+        description: 'Visit mango research orchards, Guisi Lighthouse ruins, and taste the famous sweet Mango Pizza at The Pitstop.',
+        costPHP: 800,
+        duration: '6 hours'
+      },
+      {
+        title: 'Islas de Gigantes Day Tour (Cabugao Gamay)',
+        description: 'Climb the iconic cliff viewpoint of Cabugao Gamay sandbar and feast on ₱1 scallops in Carles.',
+        costPHP: 1400,
+        duration: '8 hours'
+      },
+      {
+        title: 'La Paz Public Market Authentic Batchoy Tasting',
+        description: 'Sip legendary rich bone marrow soup with miki noodles and crunchy chicharon at Netong’s.',
+        costPHP: 150,
+        duration: '1.5 hours'
+      }
+    ],
+    localSpecialties: ['Original La Paz Batchoy', 'Sweet Guimaras Carabao Mangoes', 'Pancit Molo (Dumpling Soup)', 'Fresh Scallops & Steamed Wasay-Wasay', 'Barquillos & Biscocho from De Ocampo’s'],
+    travelTips: [
+      'Pumpboats from Iloilo Parola Wharf to Jordan Wharf in Guimaras take only 15 minutes and cost ₱40.',
+      'Scallops at Islas de Gigantes are as cheap as ₱1 to ₱2 per piece during peak harvest seasons!',
+      'Stroll along the Iloilo River Esplanade at sunset for one of the cleanest, most pedestrian-friendly urban walks in the country.'
+    ],
+    rating: 4.91,
+    reviewCount: 462
+  },
+  {
+    id: 'dumaguete-apo',
+    name: 'Dumaguete & Apo Island',
+    location: 'Negros Oriental, Central Visayas',
+    region: 'Visayas',
+    tagline: 'The Gentle University City & Swimming with Wild Sea Turtles',
+    description: 'A relaxed coastal haven known as the "City of Gentle People." Stroll down breezy acacia-lined Rizal Boulevard, visit historic Siliman University, and take a quick boat to Apo Island—one of the world’s most successful community marine sanctuaries where travelers swim alongside dozens of wild giant green sea turtles in shallow coral reefs.',
+    heroImage: '/src/assets/images/dumaguete_apo_1793074963512.jpg',
+    galleryImages: [
+      'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d9/Apo_Island_east.jpg/1280px-Apo_Island_east.jpg'
+    ],
+    estimatedDailyBudgetPHP: 2500,
+    bestTimeToVisit: 'October to May (Calm seas and crystal-clear underwater visibility)',
+    idealDurationDays: 3,
+    tags: ['Sea Turtles & Diving', 'Marine Sanctuaries', 'Gentle City & Cafes', 'Sandbars', 'Waterfalls'],
+    coordinates: { lat: 9.3068, lng: 123.3054 },
+    popularActivities: [
+      {
+        title: 'Apo Island Snorkeling with Wild Sea Turtles',
+        description: 'Snorkel in shallow, warm reef waters right beside gentle green sea turtles feeding on sea grass.',
+        costPHP: 1200,
+        duration: '6 hours'
+      },
+      {
+        title: 'Manjuyod White Sandbar ("Maldives of the Philippines")',
+        description: 'Cruise to a 7-kilometer pure white sandbar that emerges during low tide with stilt cottages over neon blue water.',
+        costPHP: 1500,
+        duration: '5 hours'
+      },
+      {
+        title: 'Casaroro Waterfall Trek in Valencia',
+        description: 'Descend a 350-step canyon trail to a sheer, roaring 100-foot waterfall framed by volcanic basalt rock walls.',
+        costPHP: 150,
+        duration: '3 hours'
+      },
+      {
+        title: 'Rizal Boulevard Sunset Stroll & Street Food Tempura',
+        description: 'Sip artisan coffee or sample Dumaguete’s famous deep-fried tempura with sweet and spicy leveled sauces.',
+        costPHP: 100,
+        duration: '2 hours'
+      }
+    ],
+    localSpecialties: ['Silvanas & Sans Rival from Sans Rival Bistro', 'Dumaguete Jumbo Tempura & Balut', 'Budbod Tanjay (sticky chocolate millet kakanin)', 'Fresh Fried Flying Fish (Bangsi)'],
+    travelTips: [
+      'Tricycles around downtown Dumaguete charge a standardized fare of ₱15 to ₱20 per passenger.',
+      'Boats to Apo Island depart from Malatapay Wharf in Zamboanguita (30 mins south of Dumaguete). Visit on Wednesdays for the lively Malatapay livestock & flea market!',
+      'Do not touch or crowd the sea turtles at Apo Island; local community guides enforce a strict 3-meter distance policy.'
+    ],
+    rating: 4.89,
+    reviewCount: 378
+  },
+  {
+    id: 'bacolod',
+    name: 'Bacolod & Negros Occidental',
+    location: 'Western Visayas, Philippines',
+    region: 'Visayas',
+    tagline: 'The City of Smiles, The Ruins Mansion & Sugarlandia Heritage',
+    description: 'The sweet capital of the Philippines famous for vibrant MassKara festival masks, historic 19th-century sugar barons’ ancestral mansions, and the world’s best charcoal-grilled Chicken Inasal. Explore the poignant grandeur of The Ruins in Talisay and escape to Lakawon Island’s floating beach club.',
+    heroImage: '/src/assets/images/bacolod_ruins_1793074979127.jpg',
+    galleryImages: [
+      'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b7/The_Ruins_%28Talisay%2C_Negros_Occidental%29_2023-08-06.jpg/1280px-The_Ruins_%28Talisay%2C_Negros_Occidental%29_2023-08-06.jpg'
+    ],
+    estimatedDailyBudgetPHP: 2400,
+    bestTimeToVisit: 'September to May (October hosts the electric MassKara Festival)',
+    idealDurationDays: 3,
+    tags: ['Chicken Inasal', 'Heritage Mansions', 'Sweet Treats & Piaya', 'Culture & Festivals', 'Sandbars'],
+    coordinates: { lat: 10.6765, lng: 122.9509 },
+    popularActivities: [
+      {
+        title: 'The Ruins Sunset Tour in Talisay',
+        description: 'Explore the Taj Mahal of Negros, built out of egg-white concrete as a tribute to a sugar baron’s lost love.',
+        costPHP: 150,
+        duration: '2.5 hours'
+      },
+      {
+        title: 'Manokan Country Chicken Inasal Feast',
+        description: 'Dine with bare hands on chicken basted with orange annatto oil, calamansi, and garlic rice.',
+        costPHP: 220,
+        duration: '1.5 hours'
+      },
+      {
+        title: 'Silay City Heritage Ancestral Houses Tour',
+        description: 'Walk through the "Paris of Negros," featuring more than 30 registered Spanish-American heritage homes.',
+        costPHP: 100,
+        duration: '3 hours'
+      },
+      {
+        title: 'Lakawon Island Day Trip & TawHai Floating Bar',
+        description: 'Sunbathe on a 16-hectare banana-shaped island sandbar and sip cocktails on Asia’s largest floating bar.',
+        costPHP: 1100,
+        duration: '6 hours'
+      }
+    ],
+    localSpecialties: ['Authentic Charcoal-grilled Chicken Inasal', 'Bacolod Beef Shank Cansi', 'Flaky Muscovado Piaya & Napoleones', 'Fresh Lumpiang Ubod from Emma Lacson’s', 'Calea Pastries Mudpie & Cheesecake'],
+    travelTips: [
+      'Bacolod-Silay International Airport (BCD) has frequent 1-hour flights from Manila and Cebu.',
+      'FastCat or OceanJet ferries connect Bacolod to Iloilo in just 1 hour, making twin-city travel effortless!',
+      'Make sure to drizzle fragrant orange Chicken Oil (Achuete Oil) over your garlic rice at Manokan Country.'
+    ],
+    rating: 4.86,
+    reviewCount: 410
+  },
+  {
+    id: 'la-union',
+    name: 'La Union (San Juan & Bauang)',
+    location: 'Ilocos Region, Northwestern Luzon',
+    region: 'Luzon',
+    tagline: 'The Surfing Capital of the North & Bohemian Coastal Sunsets',
+    description: 'Affectionately known as "Elyu," this vibrant coastal stretch along the West Philippine Sea combines world-class surfing point breaks at Urbiztondo Beach with a bohemian corridor of indie third-wave cafes, sunset bars, and cliff jumps at Tangadan Falls.',
+    heroImage: '/src/assets/images/la_union_surf_1793074996871.jpg',
+    galleryImages: [
+      'https://upload.wikimedia.org/wikipedia/commons/thumb/0/01/Surf%E2%80%99s_up.jpg/1280px-Surf%E2%80%99s_up.jpg'
+    ],
+    estimatedDailyBudgetPHP: 2800,
+    bestTimeToVisit: 'October to March (Peak North Swell surf waves), Year-round for beach culture',
+    idealDurationDays: 3,
+    tags: ['Surfing & Waves', 'Beach Cafes & Nightlife', 'Waterfalls', 'Sunsets', 'Road Trip'],
+    coordinates: { lat: 16.6717, lng: 120.3204 },
+    popularActivities: [
+      {
+        title: 'Surfing Lesson with Certified Instructors at Urbiztondo',
+        description: 'Catch your first rolling wave on a longboard along the gentle sandy bottom point break.',
+        costPHP: 500,
+        duration: '1.5 hours'
+      },
+      {
+        title: 'Tangadan Falls Trek & 30-Foot Cliff Jump',
+        description: 'Hike through riverbeds in San Gabriel to a dramatic two-tiered waterfall with thrilling natural diving ledges.',
+        costPHP: 650,
+        duration: '4 hours'
+      },
+      {
+        title: 'Lomboy Farms Grape Picking in Bauang',
+        description: 'Harvest plump, sweet tropical table grapes directly from vineyard trellises in the sunshine.',
+        costPHP: 250,
+        duration: '2 hours'
+      },
+      {
+        title: 'Urbiztondo Sunset & Cafe Crawl',
+        description: 'Watch the sun sink into the West Philippine Sea while savoring iced horchata, craft beer, and fish tacos.',
+        costPHP: 450,
+        duration: '3 hours'
+      }
+    ],
+    localSpecialties: ['Ilocano Bagnet with KBL (Kamatis, Bagoong, Lasona)', 'Halo-Halo de Iloko (San Fernando)', 'Buko Halo-Halo with Ube & Cheese', 'Artisan Third-Wave Pour-over Coffees', 'Fresh Catch Grilled Tuna & Blue Marlin'],
+    travelTips: [
+      'Take the Partas or Genesis deluxe bus from Cubao/Pasay directly to Urbiztondo, San Juan (approx. 4.5 hours via TPLEX).',
+      'Morning surf sessions (6:00 AM - 9:00 AM) enjoy the cleanest glassy waves with light offshore breezes.',
+      'Rent an electric scooter or tricycle to easily navigate between the cafe strip and northern cliff viewpoints.'
+    ],
+    rating: 4.84,
+    reviewCount: 520
+  },
+  {
+    id: 'intramuros-manila',
+    name: 'Intramuros & Historic Manila',
+    location: 'Metro Manila, Luzon',
+    region: 'Luzon',
+    tagline: 'The 400-Year-Old Walled City & Colonial Heart of the Philippines',
+    description: 'Step into the storied cobblestone streets of "The Walled City," built by Spanish conquistadors in 1571. Intramuros is home to San Agustin Church (a UNESCO World Heritage Site that survived WWII bombings), the historic garrison of Fort Santiago, horse-drawn kalesa carriages, and the world-class National Museum complex.',
+    heroImage: '/src/assets/images/intramuros_manila_1793075011986.jpg',
+    galleryImages: [
+      'https://upload.wikimedia.org/wikipedia/commons/thumb/7/71/San_Agustin_Church%2C_Intramuros%2C_Manila_City.jpg/1280px-San_Agustin_Church%2C_Intramuros%2C_Manila_City.jpg',
+      'https://upload.wikimedia.org/wikipedia/commons/thumb/7/7d/Fort_Santiago%2C_Intramuros.JPG/1280px-Fort_Santiago%2C_Intramuros.JPG'
+    ],
+    estimatedDailyBudgetPHP: 2200,
+    bestTimeToVisit: 'November to April (Dry season, ideal for walking and cycling heritage tours)',
+    idealDurationDays: 2,
+    tags: ['UNESCO & History', 'Colonial Architecture', 'Museums & Art', 'Kalesa & Bamboo Bikes', 'City Walk'],
+    coordinates: { lat: 14.5896, lng: 120.9747 },
+    popularActivities: [
+      {
+        title: 'Bambike Eco-Tours on Handcrafted Bamboo Bicycles',
+        description: 'Pedal atop 400-year-old volcanic tuff stone walls and through Spanish bastions on sustainable bamboo bikes.',
+        costPHP: 600,
+        duration: '2.5 hours'
+      },
+      {
+        title: 'San Agustin Church & Baroque Monastery Museum',
+        description: 'Marvel at 17th-century trompe l’oeil ceiling frescoes, antique silver altars, and cloister gardens.',
+        costPHP: 200,
+        duration: '2 hours'
+      },
+      {
+        title: 'Fort Santiago & Jose Rizal Shrine Pilgrimage',
+        description: 'Walk the final footsteps of national hero Dr. Jose Rizal from his prison cell to Luneta Park.',
+        costPHP: 75,
+        duration: '2 hours'
+      },
+      {
+        title: 'National Museum of Fine Arts (The Spoliarium)',
+        description: 'Stand in awe before Juan Luna’s colossal masterpiece "Spoliarium" and Filipino masterworks.',
+        costPHP: 0,
+        duration: '3 hours'
+      }
+    ],
+    localSpecialties: ['Churros con Chocolate at La Cathedral Cafe', 'Ilustrado Restaurant Paella Valenciana', 'Street-side Binondo Pork Buns & Dumplings', 'Classic Manila Halo-Halo & Sorbetes'],
+    travelTips: [
+      'Easily accessible via LRT-1 Central Terminal station followed by a brief 5-minute walk or electronic trike ride.',
+      'Book rooftop seats at La Cathedral Cafe at dusk to admire the illuminated facade of Manila Cathedral.',
+      'All National Museum of the Philippines buildings nearby offer 100% FREE admission to all visitors.'
+    ],
+    rating: 4.85,
+    reviewCount: 680
+  },
+  {
+    id: 'caramoan',
+    name: 'Caramoan Peninsula',
+    location: 'Camarines Sur, Bicol Region, Luzon',
+    region: 'Luzon',
+    tagline: 'Untamed Limestone Karsts & Secret Pinkish Island Sanctuaries',
+    description: 'An untouched coastal paradise tucked along the eastern coast of Camarines Sur. Famous as the recurring filming sanctuary for the international reality show "Survivor," Caramoan boasts dramatic towering limestone pinnacles, secluded lagoons, and the mystical hidden lake of Matukad Island.',
+    heroImage: '/src/assets/images/caramoan_islands_1793075033864.jpg',
+    galleryImages: [
+      'https://upload.wikimedia.org/wikipedia/commons/thumb/8/89/Caramoan_town.jpg/1280px-Caramoan_town.jpg'
+    ],
+    estimatedDailyBudgetPHP: 2600,
+    bestTimeToVisit: 'March to July (Calm seas, low rainfall, and bright tropical sunshine)',
+    idealDurationDays: 4,
+    tags: ['Survivor Islands', 'Limestone Cliffs', 'Untouched Beaches', 'Snorkeling & Caves', 'Off-the-Beaten-Path'],
+    coordinates: { lat: 13.7711, lng: 123.8653 },
+    popularActivities: [
+      {
+        title: 'Matukad Island Secret Lagoon & Rock Climbing',
+        description: 'Scale jagged limestone karsts to gaze down on an enclosed saltwater lagoon home to a legendary giant milkfish.',
+        costPHP: 1500,
+        duration: '6 hours'
+      },
+      {
+        title: 'Lahos Island Twin Beach & Sandbar Exploration',
+        description: 'Walk across a sandbar wedged between two monolithic limestone cliffs with ocean waves lapping both sides.',
+        costPHP: 1200,
+        duration: '5 hours'
+      },
+      {
+        title: 'Cotivas Island Sandbar & Fresh Buko Picnic',
+        description: 'Wade through vast shallow turquoise flats and sip fresh coconut water straight from palm trees.',
+        costPHP: 1000,
+        duration: '4 hours'
+      },
+      {
+        title: 'Mount Caglago 500-Step Shrine to Our Lady of the Peace',
+        description: 'Climb 524 steps to the gigantic statue atop the mountain with 360-degree vistas of the Bicol archipelago.',
+        costPHP: 50,
+        duration: '2 hours'
+      }
+    ],
+    localSpecialties: ['Spicy Bicol Express with Albay Chilis', 'Steamed Sugpo (Giant Tiger Prawns)', 'Fresh Grilled Squid with Calamansi-Soy', 'Laing sa Dahon ng Gabi with Tinapa'],
+    travelTips: [
+      'Fly into Naga Airport (WNP) or take a luxury overnight sleeper bus from Manila to Naga City, then transfer via van and boat to Guijalo Port.',
+      'Wear sturdy reef water shoes with rubber soles; the limestone formations on Matukad Island have razor-sharp volcanic edges.',
+      'Hire a licensed community boatman from Bgy. Paniman for the best rates and authentic island lore.'
+    ],
+    rating: 4.92,
+    reviewCount: 298
   }
 ];

@@ -17,7 +17,7 @@ export const LocalEatsView: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
 
-  const categories = ['All', 'Main Dish', 'Soup/Stew', 'Seafood', 'Dessert', 'Street Food'];
+  const categories = ['All', 'Main Dish', 'Soup/Stew', 'Seafood', 'Breakfast', 'Dessert', 'Street Food'];
 
   const filteredDishes = LOCAL_EATS.filter((dish) => {
     const matchesSearch = 
@@ -44,7 +44,7 @@ export const LocalEatsView: React.FC = () => {
             Local Eats & Island Food Crawl
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
-            A culinary expedition through 7,100 islands — from crunchy Cebu lechon and fiery Bicol Express to fresh Visayan kinilaw.
+            A culinary expedition through 7,641 islands across Luzon, Visayas, and Mindanao — from crunchy Cebu lechon and Iloilo batchoy to Davao sinuglaw and Zamboanga curacha.
           </p>
         </div>
 
