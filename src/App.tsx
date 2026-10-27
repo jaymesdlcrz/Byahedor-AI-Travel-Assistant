@@ -33,51 +33,7 @@ const DEFAULT_PREFS: UserPreferences = {
   travelPace: 'balanced',
 };
 
-const INITIAL_SAVED_TRIPS: TripPlan[] = [
-  {
-    id: 'sample-siargao',
-    title: '4-Day Tropical Surf & Secret Lagoon Adventure',
-    destination: 'Siargao Island',
-    origin: 'Manila (MNL)',
-    departureDate: '2026-10-12',
-    days: 4,
-    travelers: 2,
-    totalBudget: 22000,
-    savedAt: new Date().toISOString(),
-    coverImage: 'https://images.unsplash.com/photo-1518509562904-e7ef99cdcc86?auto=format&fit=crop&w=1200&q=80',
-    overview: 'A vibrant island getaway embracing Cloud 9 surfing, coconut road photography, Sugba Lagoon bamboo rafting, and Doot Beach tidal sunsets.',
-    budgetBreakdown: {
-      transportation: 6500,
-      accommodation: 7000,
-      food: 4500,
-      activities: 3000,
-      emergency: 1000,
-    },
-    daysPlan: [
-      {
-        dayNumber: 1,
-        theme: 'Arrival, Scooter Pick-up & Cloud 9 Sunset',
-        activities: [
-          { time: '11:30 AM', activity: 'Arrive at Sayak Airport (IAO) & pick up scooter rental', location: 'Sayak Airport', duration: '1 hr', estimatedCostPHP: 500 },
-          { time: '01:30 PM', activity: 'Açai bowl and fresh coconut lunch at Shaka Cafe', location: 'General Luna', duration: '1 hr', estimatedCostPHP: 450 },
-          { time: '05:00 PM', activity: 'Sunset boardwalk stroll at Cloud 9 surfing tower', location: 'Cloud 9 Boardwalk', duration: '2 hrs', estimatedCostPHP: 100 },
-        ]
-      },
-      {
-        dayNumber: 2,
-        theme: 'Sugba Lagoon & Magpupungko Rock Pools',
-        activities: [
-          { time: '08:00 AM', activity: 'Boat transfer to turquoise Sugba Lagoon & paddleboarding', location: 'Del Carmen', duration: '4 hrs', estimatedCostPHP: 1200 },
-          { time: '02:00 PM', activity: 'Tidal rock pool swimming at Magpupungko', location: 'Pilar', duration: '2 hrs', estimatedCostPHP: 150 },
-        ]
-      }
-    ],
-    localTips: [
-      'Rent a scooter with surfboard rack for maximum mobility (₱350–₱500/day).',
-      'Download offline maps as cell signal drops along the northern highway.',
-    ]
-  }
-];
+const INITIAL_SAVED_TRIPS: TripPlan[] = [];
 
 function getSavedTripsStorageKey(uid?: string | null): string {
   return uid ? `byahedor_saved_trips_${uid}` : 'byahedor_saved_trips_guest';
@@ -89,7 +45,14 @@ function loadSavedTripsForUser(uid?: string | null): TripPlan[] {
   if (saved) {
     try {
       const parsed = JSON.parse(saved);
-      if (Array.isArray(parsed)) return parsed;
+      if (Array.isArray(parsed)) {
+        // Exclude pre-saved sample-siargao trip if previously cached
+        const filtered = parsed.filter(t => t.id !== 'sample-siargao');
+        if (filtered.length !== parsed.length) {
+          localStorage.setItem(key, JSON.stringify(filtered));
+        }
+        return filtered;
+      }
     } catch {
       // ignore parsing errors
     }
@@ -100,7 +63,13 @@ function loadSavedTripsForUser(uid?: string | null): TripPlan[] {
     if (legacy) {
       try {
         const parsed = JSON.parse(legacy);
-        if (Array.isArray(parsed)) return parsed;
+        if (Array.isArray(parsed)) {
+          const filtered = parsed.filter(t => t.id !== 'sample-siargao');
+          if (filtered.length !== parsed.length) {
+            localStorage.setItem('byahedor_saved_trips', JSON.stringify(filtered));
+          }
+          return filtered;
+        }
       } catch {}
     }
     return INITIAL_SAVED_TRIPS;
@@ -262,7 +231,12 @@ export default function App() {
     const unsubscribe = onSnapshot(tripsCol, (snapshot) => {
       const trips: TripPlan[] = [];
       snapshot.forEach((docSnap) => {
-        trips.push(docSnap.data() as TripPlan);
+        const trip = docSnap.data() as TripPlan;
+        if (trip.id === 'sample-siargao') {
+          deleteTripRemote('sample-siargao').catch(() => {});
+        } else {
+          trips.push(trip);
+        }
       });
 
       // Sort by savedAt descending (newest trips first)
