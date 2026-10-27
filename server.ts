@@ -326,14 +326,79 @@ function getFallbackDestinationPlan(destination: string, days: number, travelers
   };
 }
 
+// Helper: Detect whether text is primarily Bisaya, Filipino/Tagalog, or English
+function detectLanguage(text: string): 'Bisaya' | 'Filipino' | 'English' {
+  if (!text || !text.trim()) return 'English';
+  const lower = text.toLowerCase();
+  
+  const bisayaKeywords = [
+    'maayong', 'adlaw', 'buntag', 'udto', 'hapon', 'gabii',
+    'unsa', 'unsay', 'asa', 'ngano', 'kinsa', 'kanus-a', 'pila', 
+    'kaon', 'mokaon', 'nindot', 'karon', 'laag', 'suroy', 'kan-anan', 
+    'lami', 'palihug', 'balay', 'barko', 'sakay', 'plete', 'habal', 
+    'tibuok', 'anhi', 'didto', 'diri', 'kahibalo', 'kamo', 'nimo', 
+    'nako', 'nato', 'namo', 'dili', 'kaayo', 'gani', 'pod', 'sab', 
+    'gyud', 'jud', 'unta', 'baya'
+  ];
+  
+  const filipinoKeywords = [
+    'magandang', 'araw', 'umaga', 'tanghali', 'gabi',
+    'ano', 'anong', 'saan', 'bakit', 'sino', 'kailan', 'magkano', 
+    'kumain', 'masarap', 'ngayon', 'byahe', 'gala', 'pasyal', 'kainan', 
+    'paki', 'bahay', 'bapor', 'pamasahe', 'buong', 'pumunta', 'dito', 
+    'doon', 'alam', 'kayo', 'tayo', 'namin', 'hindi', 'maayos', 
+    'sobra', 'nga', 'din', 'rin', 'talaga', 'sana', 'kumusta', 'kamusta'
+  ];
+
+  let bisScore = 0;
+  for (const w of bisayaKeywords) {
+    if (new RegExp(`\\b${w}\\b`, 'i').test(lower)) bisScore++;
+  }
+
+  let filScore = 0;
+  for (const w of filipinoKeywords) {
+    if (new RegExp(`\\b${w}\\b`, 'i').test(lower)) filScore++;
+  }
+
+  if (bisScore > 0 && bisScore >= filScore) return 'Bisaya';
+  if (filScore > 0 && filScore > bisScore) return 'Filipino';
+  return 'English';
+}
+
 // Helper: Rich local knowledge fallback generator for Philippine travel
-function getFallbackChatResponse(latestUserMessage: string, language?: string): string {
+function getFallbackChatResponse(latestUserMessage: string, language?: string, clientHour?: number): string {
   const query = (latestUserMessage || "").toLowerCase().trim();
+  const targetLanguage = (!language || language === 'Auto') 
+    ? detectLanguage(latestUserMessage)
+    : language;
+
+  const hour = typeof clientHour === 'number' ? clientHour : new Date().getHours();
+  const isMorning = hour >= 5 && hour < 12;
+  const isNoon = hour >= 12 && hour < 13;
+  const isAfternoon = hour >= 13 && hour < 18;
+  const isEvening = hour >= 18 || hour < 5;
+
+  let bisayaGreeting = 'Maayong adlaw';
+  if (isMorning) bisayaGreeting = 'Maayong buntag ug maayong adlaw';
+  else if (isNoon) bisayaGreeting = 'Maayong udto ug maayong adlaw';
+  else if (isAfternoon) bisayaGreeting = 'Maayong hapon ug maayong adlaw';
+  else if (isEvening) bisayaGreeting = 'Maayong gabii';
+
+  let filipinoGreeting = 'Magandang araw';
+  if (isMorning) filipinoGreeting = 'Magandang umaga';
+  else if (isNoon) filipinoGreeting = 'Magandang tanghali';
+  else if (isAfternoon) filipinoGreeting = 'Magandang hapon';
+  else if (isEvening) filipinoGreeting = 'Magandang gabi';
+
+  let englishGreeting = 'Good day';
+  if (isMorning) englishGreeting = 'Good morning';
+  else if (isNoon || isAfternoon) englishGreeting = 'Good afternoon';
+  else if (isEvening) englishGreeting = 'Good evening';
 
   // 1. Casual Greetings & Intro
-  if (/^(hi|hello|hey|kumusta|musta|hoy|uy|yo|good\s*(morning|day|afternoon|evening)|maayong\s*adlaw)[\s!.,?]*$/i.test(query) || query === "hi" || query === "hello") {
-    if (language === 'Bisaya') {
-      return `Maayong adlaw! 🌴 Ako si **Byahedor**, imong Bisaya AI travel guide! Asa man imong plano maglaag karon? 
+  if (/^(hi|hello|hey|kumusta|musta|hoy|uy|yo|good\s*(morning|day|afternoon|evening)|maayong\s*(adlaw|buntag|udto|hapon|gabii)|magandang\s*(umaga|tanghali|hapon|gabi|araw))[\s!.,?]*$/i.test(query) || query === "hi" || query === "hello") {
+    if (targetLanguage === 'Bisaya') {
+      return `${bisayaGreeting}! 🌴 Ako si **Byahedor**, imong Bisaya AI travel guide! Asa man imong plano maglaag karon? 
 
 Pwede ko mutabang nimo sa:
 - 🏝️ **Mga nindot nga isla** (Siargao, Palawan, Cebu, Bantayan, Siquijor)
@@ -342,8 +407,8 @@ Pwede ko mutabang nimo sa:
 
 Unsa may naa sa imong huna-huna?`;
     }
-    if (language === 'Filipino') {
-      return `Mabuhay! Kumusta kaibigan! 🌴 Ako si **Byahedor**, ang iyong personal AI Philippine travel concierge!
+    if (targetLanguage === 'Filipino') {
+      return `${filipinoGreeting}! Mabuhay! 🌴 Ako si **Byahedor**, ang iyong personal AI Philippine travel concierge!
 
 Saan mo gustong mag-byahe next? Matutulungan kita sa:
 - 🏖️ **Itinerary & Day-by-Day Guides** (Siargao, El Nido, Coron, Cebu, Batanes, Bohol)
@@ -352,7 +417,7 @@ Saan mo gustong mag-byahe next? Matutulungan kita sa:
 
 I-type mo lang ang pupuntahan mo o itanong kahit ano tungkol sa byahe!`;
     }
-    return `Mabuhay! 🌴 I'm **Byahedor**, your friendly Philippine AI travel concierge!
+    return `Mabuhay & ${englishGreeting}! 🌴 I'm **Byahedor**, your friendly Philippine AI travel concierge!
 
 How can I help you plan your next island adventure?
 - 🏖️ **Custom Itineraries:** Siargao, Palawan, Cebu, Bohol, Batanes, Boracay, Sagada, and 7,640+ islands
@@ -598,23 +663,28 @@ function formatGeminiContents(
 
 // 1. Chat Endpoint (Supports both streaming SSE and standard JSON with file attachments)
 app.post("/api/chat", async (req: Request, res: Response) => {
-  const { message, messages, history, language, userPreferences, destinationContext, stream, file } = req.body;
+  const { 
+    message, 
+    messages, 
+    history, 
+    language, 
+    detectedLanguage,
+    userPreferences, 
+    destinationContext, 
+    stream, 
+    file,
+    clientTime,
+    clientHour,
+    timeOfDay 
+  } = req.body;
   const isStream = stream === true || req.headers.accept?.includes("text/event-stream") || req.query.stream === "true";
 
   const ai = getAIClient();
-  const currentLang = language || userPreferences?.language || "English";
-  let contextPrompt = `${BYAHEDOR_SYSTEM_INSTRUCTION}
-
-You are responding to the user in their requested dialect or language (${currentLang}).
-Always maintain warm Filipino hospitality (Mabuhay!), share realistic cost estimates in Philippine Pesos (₱), give safety and transit hacks (bangka, jeepney, tricycle, ferries), and format your response cleanly with clear markdown headings, bullet points, and numbered lists.
-If the user uploads an image, photo, ticket, receipt, or travel document, analyze it thoroughly: identify Philippine landmarks, translate menus, extract itinerary or boarding times, check prices in PHP, or verify travel requirements.`;
-
-  if (userPreferences) {
-    contextPrompt += `\nUser Preferences: Travel style: ${userPreferences.travelStyle || 'flexible'}, Budget tier: ${userPreferences.budgetTier || 'moderate'}.`;
-  }
-  if (destinationContext) {
-    contextPrompt += `\nCurrent user focus destination: ${destinationContext}.`;
-  }
+  const rawLang = language || userPreferences?.language || "Auto";
+  const now = new Date();
+  const currentHour = typeof clientHour === 'number' ? clientHour : now.getHours();
+  const period = timeOfDay || (currentHour >= 5 && currentHour < 12 ? 'morning' : (currentHour >= 12 && currentHour < 13 ? 'noon' : (currentHour >= 13 && currentHour < 18 ? 'afternoon' : 'evening')));
+  const displayTime = clientTime || now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
   // Determine the user's latest query
   let latestUserMessage = "";
@@ -624,6 +694,33 @@ If the user uploads an image, photo, ticket, receipt, or travel document, analyz
     const last = messages[messages.length - 1];
     latestUserMessage = last.content || last.text || "";
   }
+
+  const promptLanguage = detectedLanguage || detectLanguage(latestUserMessage);
+  const effectiveLang = rawLang === "Auto" ? promptLanguage : rawLang;
+
+  let contextPrompt = `${BYAHEDOR_SYSTEM_INSTRUCTION}
+
+### Multilingual Dialect & Language Instructions:
+- Language Mode: "${rawLang}". Detected Language of Traveler Query: "${promptLanguage}".
+- Target Response Language: "${effectiveLang}".
+- CRITICAL MULTILINGUAL RULES:
+  * When the traveler writes or asks in **Bisaya / Cebuano** (or uses Bisaya words such as 'unsa', 'asa', 'kaon', 'nindot', 'pila', 'maayong adlaw', 'laag', 'kan-anan', 'suroy', 'palihug', 'lami'):
+    -> RESPOND FLUENTLY IN BISAYA. Use natural Bisaya idioms, welcoming warmth, and time greetings (Maayong adlaw / Maayong buntag / Maayong udto / Maayong hapon / Maayong gabii).
+  * When the traveler writes or asks in **Filipino / Tagalog** (or Taglish):
+    -> RESPOND IN NATURAL CONVERSATIONAL FILIPINO / TAGALOG with appropriate time greetings (Magandang umaga / tanghali / hapon / gabi / Mabuhay!).
+  * When the traveler writes or asks in **English**:
+    -> RESPOND IN WARM, CLEAR ENGLISH with Filipino hospitality (Mabuhay!).
+  * If the user switches language from turn to turn (e.g. from English to Bisaya, or Tagalog to Bisaya), automatically match and mirror their newly chosen language immediately on each turn!
+
+Always maintain warm Filipino hospitality (Mabuhay!), share realistic cost estimates in Philippine Pesos (₱), give safety and transit hacks (bangka, jeepney, tricycle, ferries), and format your response cleanly with clear markdown headings, bullet points, and numbered lists.
+If the user uploads an image, photo, ticket, receipt, or travel document, analyze it thoroughly: identify Philippine landmarks, translate menus, extract itinerary or boarding times, check prices in PHP, or verify travel requirements.
+
+### Time-Synchronized Philippine Greetings:
+- The traveler's current local time is: ${displayTime} (${period}).
+- Whenever greeting or beginning a conversation, synchronize your greeting with their current time of day:
+  * In Bisaya: Use 'Maayong adlaw!' or time-specific greetings: 'Maayong buntag' (morning), 'Maayong udto' (noon), 'Maayong hapon' (afternoon), or 'Maayong gabii' (evening). Example: 'Maayong adlaw! 🌴' or 'Maayong buntag!'
+  * In Filipino / Tagalog: Use 'Magandang umaga' (morning), 'Magandang tanghali' (noon), 'Magandang hapon' (afternoon), or 'Magandang gabi' (evening), alongside 'Mabuhay!'. Example: 'Magandang araw / Magandang hapon! Mabuhay! 🌴'
+  * In English: Use 'Good morning', 'Good afternoon', or 'Good evening' alongside 'Mabuhay!'.`;
 
   if (!latestUserMessage && file) {
     latestUserMessage = file.mimeType?.startsWith("image/")
@@ -683,7 +780,7 @@ If the user uploads an image, photo, ticket, receipt, or travel document, analyz
     }
 
     // Stream fallback tokens smoothly if Gemini stream was unavailable
-    const fallbackText = getFallbackChatResponse(latestUserMessage, currentLang);
+    const fallbackText = getFallbackChatResponse(latestUserMessage, effectiveLang, currentHour);
     const tokens = fallbackText.match(/\S+\s*|\n+/g) || [fallbackText];
     for (const token of tokens) {
       sendChunk({ text: token, done: false });
@@ -717,7 +814,7 @@ If the user uploads an image, photo, ticket, receipt, or travel document, analyz
     }
   }
 
-  const fallbackText = getFallbackChatResponse(latestUserMessage, currentLang);
+  const fallbackText = getFallbackChatResponse(latestUserMessage, effectiveLang, currentHour);
   return res.json({
     reply: fallbackText,
     text: fallbackText,

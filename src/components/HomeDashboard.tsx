@@ -10,12 +10,13 @@ import {
   PlaneTakeoff, 
   ShieldCheck,
   Palmtree,
-  Wallet
+  Wallet,
+  LogIn,
+  CloudCheck
 } from 'lucide-react';
 import { Destination, NavView } from '../types';
 import { DESTINATIONS } from '../data/destinations';
 import { useAuth } from '../firebase/context';
-import { LogIn, CloudCheck } from 'lucide-react';
 
 interface HomeDashboardProps {
   onNavigate: (view: NavView) => void;
