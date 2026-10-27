@@ -65,7 +65,7 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
           </svg>
         </div>
 
-        <div className="relative z-10 max-w-2xl space-y-2.5 sm:space-y-3">
+        <div className="relative z-10 max-w-3xl space-y-2.5 sm:space-y-3">
           <div className="flex flex-wrap items-center gap-2">
             <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/15 backdrop-blur-md text-[10px] sm:text-[11px] font-bold text-white/95 border border-white/20">
               <Sparkles className="w-3 h-3 text-[#FFB84D]" />
@@ -124,15 +124,18 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
             </button>
           </form>
 
-          {/* Quick Prompts Chips with horizontal touch scroll */}
-          <div className="pt-1">
-            <span className="text-[10px] sm:text-[11px] font-semibold text-white/80 block mb-1">Quick Inspiration:</span>
-            <div className="flex flex-wrap sm:flex-nowrap sm:overflow-x-auto gap-1.5 pb-0.5 no-scrollbar">
+          {/* Quick Prompts Chips with clean wrapping so no chip is cut off */}
+          <div className="pt-1.5">
+            <span className="text-[10px] sm:text-[11px] font-bold text-white/90 block mb-1.5 tracking-wide">
+              Quick Inspiration:
+            </span>
+            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
               {quickPrompts.map((p, idx) => (
                 <button
                   key={idx}
+                  type="button"
                   onClick={() => onStartChat(p.query)}
-                  className="text-[10px] sm:text-[11px] font-medium px-2 py-1 rounded-lg bg-white/15 hover:bg-white/25 backdrop-blur-md text-white border border-white/20 transition-all flex items-center gap-1 whitespace-nowrap active:scale-95"
+                  className="text-[10px] sm:text-[11px] font-semibold px-2.5 py-1.5 rounded-lg bg-white/20 hover:bg-white/30 backdrop-blur-md text-white border border-white/25 hover:border-white/50 transition-all flex items-center gap-1.5 shrink-0 active:scale-95 cursor-pointer shadow-2xs"
                 >
                   <span>{p.label}</span>
                 </button>
