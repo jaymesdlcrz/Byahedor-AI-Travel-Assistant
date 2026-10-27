@@ -30,6 +30,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { ChatMessage, ChatAttachment } from '../types';
+import { useAuth } from '../firebase/context';
 
 interface AiChatViewProps {
   initialPrompt?: string;
@@ -44,11 +45,14 @@ interface LocalAttachedFile {
   previewUrl?: string;
 }
 
-const INITIAL_MESSAGES: ChatMessage[] = [
-  {
-    id: 'msg-welcome',
-    sender: 'ai',
-    text: `Mabuhay! 🌴 I'm **Byahedor**, your friendly AI Philippine travel companion!
+const getInitialMessages = (user?: { displayName?: string | null; email?: string | null } | null): ChatMessage[] => {
+  const name = user?.displayName ? user.displayName.split(' ')[0] : '';
+  const greeting = name ? `Mabuhay, **${name}**! 🌴` : `Mabuhay! 🌴`;
+  return [
+    {
+      id: `msg-welcome-${Date.now()}`,
+      sender: 'ai',
+      text: `${greeting} I'm **Byahedor**, your friendly AI Philippine travel companion!
 
 Whether you're looking for secret beaches in **Palawan**, planning a surfing trip to **Siargao**, budgeting for **Cebu canyoneering**, or craving authentic **Bacolod chicken inasal**, I'm here to guide you every step of the way!
 
@@ -57,9 +61,10 @@ Whether you're looking for secret beaches in **Palawan**, planning a surfing tri
 - 🎙️ **Voice Speech-to-Text:** Tap the microphone icon to speak your travel questions naturally in English, Filipino, or Bisaya!
 
 How can I help you plan your next *byahe* today? (You can chat with me in English, Tagalog, or Bisaya!)`,
-    timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-  }
-];
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    }
+  ];
+};
 
 const KNOWN_DESTINATIONS = [
   'Siargao', 'El Nido', 'Coron', 'Palawan', 'Cebu', 'Batanes', 
@@ -91,17 +96,31 @@ export const AiChatView: React.FC<AiChatViewProps> = ({
   initialPrompt,
   onStartPlanning
 }) => {
+  const { currentUser } = useAuth();
+  const userKey = currentUser ? currentUser.uid : 'guest';
+  const chatStorageKey = `byahedor_chat_history_${userKey}`;
+
   const [messages, setMessages] = useState<ChatMessage[]>(() => {
-    const saved = localStorage.getItem('byahedor_chat_history');
+    const saved = localStorage.getItem(chatStorageKey);
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
       } catch {
-        return INITIAL_MESSAGES;
+        // ignore
       }
     }
-    return INITIAL_MESSAGES;
+    // Backward-compatible fallback for guest: check legacy 'byahedor_chat_history'
+    if (!currentUser) {
+      const legacy = localStorage.getItem('byahedor_chat_history');
+      if (legacy) {
+        try {
+          const parsed = JSON.parse(legacy);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        } catch {}
+      }
+    }
+    return getInitialMessages(currentUser);
   });
 
   const [inputPrompt, setInputPrompt] = useState(initialPrompt || '');
@@ -128,10 +147,13 @@ export const AiChatView: React.FC<AiChatViewProps> = ({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  // Save history to local storage
+  // Save history to local storage under user-scoped key
   useEffect(() => {
-    localStorage.setItem('byahedor_chat_history', JSON.stringify(messages));
-  }, [messages]);
+    localStorage.setItem(chatStorageKey, JSON.stringify(messages));
+    if (!currentUser) {
+      localStorage.setItem('byahedor_chat_history', JSON.stringify(messages));
+    }
+  }, [messages, chatStorageKey, currentUser]);
 
   // Continuous Auto-scroll that moves with the stream
   useEffect(() => {
@@ -539,8 +561,12 @@ export const AiChatView: React.FC<AiChatViewProps> = ({
       window.speechSynthesis.cancel();
     }
     setSpeakingId(null);
-    setMessages(INITIAL_MESSAGES);
-    localStorage.removeItem('byahedor_chat_history');
+    const fresh = getInitialMessages(currentUser);
+    setMessages(fresh);
+    localStorage.removeItem(chatStorageKey);
+    if (!currentUser) {
+      localStorage.removeItem('byahedor_chat_history');
+    }
   };
 
   const handleRegenerate = (index: number) => {
@@ -611,11 +637,17 @@ export const AiChatView: React.FC<AiChatViewProps> = ({
             <Bot className="w-4 h-4" />
           </div>
           <div className="min-w-0">
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 flex-wrap">
               <h2 className="text-xs sm:text-sm font-bold text-[#102A43] dark:text-white font-heading truncate">
                 Byahedor AI Concierge
               </h2>
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" title="Live" />
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-[#087EA4]/10 dark:bg-[#087EA4]/25 text-[#087EA4] dark:text-[#4DB8E8] text-[9px] font-semibold">
+                <User className="w-2.5 h-2.5 shrink-0" />
+                <span className="max-w-[75px] sm:max-w-[120px] truncate">
+                  {currentUser ? (currentUser.displayName || currentUser.email || 'Member') : 'Guest'}
+                </span>
+              </span>
             </div>
             <p className="text-[10px] text-[#627D98] dark:text-slate-400 truncate">
               Island guide, vision & voice concierge

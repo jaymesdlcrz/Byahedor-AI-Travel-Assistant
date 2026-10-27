@@ -79,6 +79,36 @@ const INITIAL_SAVED_TRIPS: TripPlan[] = [
   }
 ];
 
+function getSavedTripsStorageKey(uid?: string | null): string {
+  return uid ? `byahedor_saved_trips_${uid}` : 'byahedor_saved_trips_guest';
+}
+
+function loadSavedTripsForUser(uid?: string | null): TripPlan[] {
+  const key = getSavedTripsStorageKey(uid);
+  const saved = localStorage.getItem(key);
+  if (saved) {
+    try {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed)) return parsed;
+    } catch {
+      // ignore parsing errors
+    }
+  }
+  // For guest, check legacy 'byahedor_saved_trips' for backward-compatibility
+  if (!uid) {
+    const legacy = localStorage.getItem('byahedor_saved_trips');
+    if (legacy) {
+      try {
+        const parsed = JSON.parse(legacy);
+        if (Array.isArray(parsed)) return parsed;
+      } catch {}
+    }
+    return INITIAL_SAVED_TRIPS;
+  }
+  // For signed-in user without local cache, start empty (Firestore will supply)
+  return [];
+}
+
 export default function App() {
   const [loadingApp, setLoadingApp] = useState(true);
   const [currentView, setCurrentView] = useState<NavView>('home');
@@ -121,17 +151,9 @@ export default function App() {
     return () => window.visualViewport?.removeEventListener('resize', handleViewport);
   }, []);
 
-  // Saved trips state with local persistence
+  // Saved trips state scoped per user
   const [savedTrips, setSavedTrips] = useState<TripPlan[]>(() => {
-    const saved = localStorage.getItem('byahedor_saved_trips');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        return INITIAL_SAVED_TRIPS;
-      }
-    }
-    return INITIAL_SAVED_TRIPS;
+    return loadSavedTripsForUser(currentUser?.uid);
   });
 
   // User Preferences
@@ -222,9 +244,18 @@ export default function App() {
     }
   }, [themeMode]);
 
-  // Sync saved trips from Firebase Firestore in real-time when user is authenticated
+  // Sync saved trips when user logs in, switches accounts, or logs out
   useEffect(() => {
-    if (!currentUser) return;
+    if (!currentUser) {
+      // Switched to guest mode or logged out: load guest trips
+      setSavedTrips(loadSavedTripsForUser(null));
+      return;
+    }
+
+    // Authenticated user: immediately populate with this user's local cache
+    const initialUserTrips = loadSavedTripsForUser(currentUser.uid);
+    setSavedTrips(initialUserTrips);
+
     const tripsPath = `users/${currentUser.uid}/savedTrips`;
     const tripsCol = collection(db, 'users', currentUser.uid, 'savedTrips');
     
@@ -233,21 +264,23 @@ export default function App() {
       snapshot.forEach((docSnap) => {
         trips.push(docSnap.data() as TripPlan);
       });
-      // If user has saved trips in Firestore, sync them
-      if (trips.length > 0) {
-        setSavedTrips(trips);
-      } else if (savedTrips.length > 0) {
-        // Upload initial sample/cached trips to user's new Firestore account
-        savedTrips.forEach((t) => {
-          saveTripRemote(t).catch(() => {});
-        });
-      }
+
+      // Sort by savedAt descending (newest trips first)
+      trips.sort((a, b) => {
+        const timeA = a.savedAt ? new Date(a.savedAt).getTime() : 0;
+        const timeB = b.savedAt ? new Date(b.savedAt).getTime() : 0;
+        return timeB - timeA;
+      });
+
+      // Update state and write to user-scoped localStorage
+      setSavedTrips(trips);
+      localStorage.setItem(getSavedTripsStorageKey(currentUser.uid), JSON.stringify(trips));
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, tripsPath);
     });
 
     return () => unsubscribe();
-  }, [currentUser]);
+  }, [currentUser?.uid]);
 
   // Sync user profile preferences from Firebase Firestore
   useEffect(() => {
@@ -284,8 +317,12 @@ export default function App() {
   }, [currentUser]);
 
   useEffect(() => {
-    localStorage.setItem('byahedor_saved_trips', JSON.stringify(savedTrips));
-  }, [savedTrips]);
+    const key = getSavedTripsStorageKey(currentUser?.uid);
+    localStorage.setItem(key, JSON.stringify(savedTrips));
+    if (!currentUser) {
+      localStorage.setItem('byahedor_saved_trips', JSON.stringify(savedTrips));
+    }
+  }, [savedTrips, currentUser?.uid]);
 
   useEffect(() => {
     localStorage.setItem('byahedor_user_prefs', JSON.stringify(userPrefs));
@@ -319,10 +356,9 @@ export default function App() {
   const handleSaveTrip = (newTrip: TripPlan) => {
     setSavedTrips(prev => {
       const exists = prev.some(t => t.id === newTrip.id);
-      if (exists) {
-        return prev.map(t => t.id === newTrip.id ? newTrip : t);
-      }
-      return [newTrip, ...prev];
+      const updated = exists ? prev.map(t => t.id === newTrip.id ? newTrip : t) : [newTrip, ...prev];
+      localStorage.setItem(getSavedTripsStorageKey(currentUser?.uid), JSON.stringify(updated));
+      return updated;
     });
 
     // Remote sync to Firebase
@@ -334,7 +370,11 @@ export default function App() {
   };
 
   const handleDeleteTrip = (tripId: string) => {
-    setSavedTrips(prev => prev.filter(t => t.id !== tripId));
+    setSavedTrips(prev => {
+      const updated = prev.filter(t => t.id !== tripId);
+      localStorage.setItem(getSavedTripsStorageKey(currentUser?.uid), JSON.stringify(updated));
+      return updated;
+    });
     
     // Remote deletion from Firebase
     if (currentUser) {
@@ -380,9 +420,15 @@ export default function App() {
   };
 
   const handleClearAllData = () => {
-    localStorage.removeItem('byahedor_saved_trips');
+    const userKey = currentUser ? currentUser.uid : 'guest';
+    const tripsKey = getSavedTripsStorageKey(currentUser?.uid);
+    localStorage.removeItem(tripsKey);
+    localStorage.removeItem(`byahedor_chat_history_${userKey}`);
     localStorage.removeItem('byahedor_checklist');
-    localStorage.removeItem('byahedor_chat_history');
+    if (!currentUser) {
+      localStorage.removeItem('byahedor_saved_trips');
+      localStorage.removeItem('byahedor_chat_history');
+    }
     setSavedTrips([]);
     handleNavigate('home');
   };
@@ -492,6 +538,7 @@ export default function App() {
 
           {currentView === 'chat' && (
             <AiChatView
+              key={currentUser ? currentUser.uid : 'guest'}
               initialPrompt={chatPrefillPrompt}
               onStartPlanning={handleStartPlanning}
             />
