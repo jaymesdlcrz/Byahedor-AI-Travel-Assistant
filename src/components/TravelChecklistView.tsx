@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { ChecklistCategory, ChecklistItem } from '../types';
 import { DESTINATIONS } from '../data/destinations';
+import { exportChecklistPdf } from '../utils/pdfExport';
 
 const DEFAULT_CATEGORIES: ChecklistCategory[] = [
   {
@@ -153,24 +154,8 @@ export const TravelChecklistView: React.FC = () => {
     }
   };
 
-  const handleExportText = () => {
-    let text = `🎒 BYAHEDOR TRAVEL PACKING CHECKLIST\n`;
-    text += `Progress: ${checkedItems.length}/${allItems.length} (${percentComplete}% Packed)\n\n`;
-
-    categories.forEach(cat => {
-      text += `\n[ ${cat.name.toUpperCase()} ]\n`;
-      cat.items.forEach(item => {
-        text += `${item.isChecked ? '[x]' : '[ ]'} ${item.label}${item.isEssential ? ' (Essential)' : ''}\n`;
-      });
-    });
-
-    const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `Byahedor_Packing_Checklist.txt`;
-    a.click();
-    URL.revokeObjectURL(url);
+  const handleExportPdf = () => {
+    exportChecklistPdf(categories, percentComplete, destName);
   };
 
   return (
@@ -250,12 +235,12 @@ export const TravelChecklistView: React.FC = () => {
           </button>
 
           <button
-            onClick={handleExportText}
-            className="min-h-[38px] py-2 px-3 rounded-xl bg-white dark:bg-[#0f233a] text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-xs font-bold hover:bg-slate-50 transition-all flex items-center justify-center gap-1 active:scale-95"
-            title="Download Checklist"
+            onClick={handleExportPdf}
+            className="min-h-[38px] py-2 px-3 rounded-xl bg-white dark:bg-[#0f233a] text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-xs font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition-all flex items-center justify-center gap-1.5 active:scale-95 shadow-2xs"
+            title="Export Packing Checklist as PDF Document"
           >
-            <Download className="w-3.5 h-3.5" />
-            <span>Export</span>
+            <FileText className="w-3.5 h-3.5 text-[#087EA4]" />
+            <span>Export PDF</span>
           </button>
 
           <button

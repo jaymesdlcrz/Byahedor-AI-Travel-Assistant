@@ -19,11 +19,13 @@ import {
   RotateCcw,
   AlertCircle,
   Lightbulb,
-  DollarSign
+  DollarSign,
+  FileText
 } from 'lucide-react';
 import { TripPlan, Destination, DayPlan } from '../types';
 import { DESTINATIONS } from '../data/destinations';
 import confetti from 'canvas-confetti';
+import { exportTripPlanPdf } from '../utils/pdfExport';
 
 interface TripPlannerViewProps {
   initialDestination?: string;
@@ -145,32 +147,9 @@ export const TripPlannerView: React.FC<TripPlannerViewProps> = ({
     setTimeout(() => setSavedSuccess(false), 4000);
   };
 
-  const handleExportText = () => {
+  const handleExportPdf = () => {
     if (!currentPlan) return;
-    let exportText = `✈️ BYAHEDOR ITINERARY: ${currentPlan.title}\n`;
-    exportText += `📍 Destination: ${currentPlan.destination} | 👥 Travelers: ${currentPlan.travelers} | 📅 Days: ${currentPlan.days}\n`;
-    exportText += `💰 Total Budget: ₱${currentPlan.totalBudget.toLocaleString()} PHP\n\n`;
-    exportText += `--- OVERVIEW ---\n${currentPlan.overview}\n\n`;
-    
-    currentPlan.daysPlan.forEach((d) => {
-      exportText += `\n📅 DAY ${d.dayNumber}: ${d.theme}\n`;
-      d.activities.forEach((act) => {
-        exportText += `• ${act.time} - ${act.activity} (${act.location}) | ~₱${act.estimatedCostPHP} (${act.duration})\n`;
-      });
-    });
-
-    exportText += `\n--- LOCAL INSIDER TIPS ---\n`;
-    currentPlan.localTips.forEach((tip) => {
-      exportText += `• ${tip}\n`;
-    });
-
-    const blob = new Blob([exportText], { type: 'text/plain;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `Byahedor_${currentPlan.destination.replace(/\s+/g, '_')}_Plan.txt`;
-    a.click();
-    URL.revokeObjectURL(url);
+    exportTripPlanPdf(currentPlan);
   };
 
   const isSaved = currentPlan ? savedTripIds.includes(currentPlan.id) : false;
@@ -410,12 +389,12 @@ export const TripPlannerView: React.FC<TripPlannerViewProps> = ({
                   </button>
 
                   <button
-                    onClick={handleExportText}
-                    className="min-h-[38px] px-3 py-1.5 rounded-lg text-xs font-bold bg-white/20 hover:bg-white/30 text-white backdrop-blur-md transition-all flex items-center justify-center gap-1 active:scale-95"
-                    title="Export Itinerary as Text File"
+                    onClick={handleExportPdf}
+                    className="min-h-[38px] px-3 py-1.5 rounded-lg text-xs font-bold bg-white/20 hover:bg-white/30 text-white backdrop-blur-md transition-all flex items-center justify-center gap-1.5 active:scale-95 shadow-2xs"
+                    title="Export Itinerary as PDF Document"
                   >
-                    <Download className="w-3.5 h-3.5" />
-                    <span>Export</span>
+                    <FileText className="w-3.5 h-3.5 text-[#FFB84D]" />
+                    <span>Export PDF</span>
                   </button>
 
                   <button

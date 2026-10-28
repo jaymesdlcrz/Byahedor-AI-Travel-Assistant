@@ -12,10 +12,12 @@ import {
   Share2,
   BookmarkCheck,
   CloudCheck,
-  LogIn
+  LogIn,
+  FileText
 } from 'lucide-react';
 import { TripPlan } from '../types';
 import { useAuth } from '../firebase/context';
+import { exportTripPlanPdf } from '../utils/pdfExport';
 
 interface SavedTripsViewProps {
   savedTrips: TripPlan[];
@@ -32,25 +34,7 @@ export const SavedTripsView: React.FC<SavedTripsViewProps> = ({
 }) => {
   const { currentUser, openAuthModal } = useAuth();
   const handleExportSingle = (trip: TripPlan) => {
-    let text = `✈️ BYAHEDOR SAVED ITINERARY: ${trip.title}\n`;
-    text += `📍 Destination: ${trip.destination} | 👥 Travelers: ${trip.travelers} | 📅 Duration: ${trip.days} Days\n`;
-    text += `💰 Estimated Budget: ₱${trip.totalBudget.toLocaleString()} PHP\n\n`;
-    text += `Overview:\n${trip.overview}\n\n`;
-
-    trip.daysPlan.forEach(d => {
-      text += `\nDAY ${d.dayNumber}: ${d.theme}\n`;
-      d.activities.forEach(a => {
-        text += `• ${a.time} - ${a.activity} (${a.location}) | ~₱${a.estimatedCostPHP}\n`;
-      });
-    });
-
-    const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `Byahedor_${trip.destination.replace(/\s+/g, '_')}.txt`;
-    a.click();
-    URL.revokeObjectURL(url);
+    exportTripPlanPdf(trip);
   };
 
   return (
@@ -195,9 +179,10 @@ export const SavedTripsView: React.FC<SavedTripsViewProps> = ({
                 <button
                   onClick={() => handleExportSingle(trip)}
                   className="min-h-[38px] py-1.5 px-2.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-200 font-bold text-xs transition-colors flex items-center justify-center gap-1 active:scale-95"
+                  title="Export Itinerary as PDF Document"
                 >
-                  <Download className="w-3.5 h-3.5" />
-                  <span>Download</span>
+                  <FileText className="w-3.5 h-3.5 text-[#087EA4]" />
+                  <span>Export PDF</span>
                 </button>
 
                 <button

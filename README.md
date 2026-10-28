@@ -57,7 +57,7 @@ Standard travel platforms often rely on Western transit assumptions and foreign 
 - **Custom multi-day itinerary generation** tailored by origin, destination, duration, group size, budget tier (Backpacker, Mid-range, Luxury), and travel style (Beach, Adventure, Culture, Foodie, Eco-tourism).
 - **Itemized Budget Allocation**: Clear breakdown across Transportation, Accommodation, Food, Activities, and Emergency contingency in PHP (₱).
 - **Interactive Day-by-Day Cards**: Organized by Morning, Afternoon, and Evening with duration badges, cost estimates, and packing notes.
-- **Saved Trips Manager (`SavedTripsView.tsx`)**: Fresh slate with no unwanted pre-saved trips. Save custom itineraries to browser `localStorage`, with export, print, and deletion controls.
+- **Saved Trips Manager (`SavedTripsView.tsx`)**: Fresh slate with no unwanted pre-saved trips. Save custom itineraries to browser `localStorage`, with one-click styled PDF export, print, and deletion controls.
 
 ### 🍲 Local Eats & Regional Gastronomy Guide (`LocalEatsView.tsx`)
 - Comprehensive directory of **23+ iconic Filipino dishes** across Luzon, Visayas, and Mindanao.
@@ -78,7 +78,7 @@ Standard travel platforms often rely on Western transit assumptions and foreign 
 ### 🎒 Dynamic Travel Packing Checklist (`TravelChecklistView.tsx`, `/api/smart-checklist`)
 - Automatically customized packing categories (Clothing & Layering, Beach & Island Gear, Health & Tropical Protection, Tech & Documents).
 - Tailored to specific Philippine destinations, expected weather conditions, and selected outdoor activities.
-- Interactive checkboxes with real-time percentage progress, filterable tabs (All, Packed, Unpacked, Essentials), and plain-text export.
+- Interactive checkboxes with real-time percentage progress, filterable tabs (All, Packed, Unpacked, Essentials), and formatted PDF export.
 
 ---
 
@@ -89,6 +89,7 @@ Standard travel platforms often rely on Western transit assumptions and foreign 
 | **Frontend Framework** | [React 19](https://react.dev/), [Vite 6](https://vitejs.dev/), [TypeScript 5.8](https://www.typescriptlang.org/) |
 | **Styling & UI** | [Tailwind CSS v4](https://tailwindcss.com/), [Lucide React](https://lucide.dev/), [Motion](https://motion.dev/) |
 | **Interactive Maps** | [@vis.gl/react-google-maps](https://visgl.github.io/react-google-maps/), Google Maps JavaScript API (Advanced Markers, InfoWindows, Roadmap/Satellite/Terrain) |
+| **PDF Generation** | [jsPDF](https://github.com/parallax/jsPDF), [jspdf-autotable](https://github.com/simonbengtsson/jsPDF-AutoTable) |
 | **AI Integration** | [@google/genai](https://www.npmjs.com/package/@google/genai) SDK (`gemini-flash-lite-latest`, `gemini-2.5-flash`, `gemini-2.0-flash`) |
 | **Backend & Server** | [Express 4](https://expressjs.com/) on Node.js, [tsx](https://github.com/privatenumber/tsx), [esbuild](https://esbuild.github.io/) |
 | **Content & Effects** | [react-markdown](https://github.com/remarkjs/react-markdown), [remark-gfm](https://github.com/remarkjs/remark-gfm), [canvas-confetti](https://www.npmjs.com/package/canvas-confetti) |
