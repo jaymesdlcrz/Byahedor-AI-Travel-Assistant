@@ -124,10 +124,7 @@ export function formatPersonalizedGreeting(
   const nameBold = name ? `, **${name}**` : '';
 
   if (language === 'Bisaya') {
-    const timeGreeting = getTimeGreeting('Bisaya', date);
-    if (time === 'morning' || time === 'noon' || time === 'afternoon') {
-      return `${timeGreeting}${nameBold}! Maayong adlaw! 🌴`;
-    }
+    const timeGreeting = getBisayaGreeting(time);
     return `${timeGreeting}${nameBold}! 🌴`;
   }
 
@@ -139,12 +136,73 @@ export function formatPersonalizedGreeting(
   if (language === 'Auto') {
     const timeGreetingEn = getTimeGreeting('English', date);
     const timeGreetingBis = getTimeGreeting('Bisaya', date);
-    // Multilingual welcoming greeting
-    return `Mabuhay & ${timeGreetingEn.toLowerCase()}${nameBold}! 🌴 (Maayong adlaw • ${timeGreetingBis})`;
+    const timeGreetingFil = getTimeGreeting('Filipino', date);
+    // Multilingual welcoming greeting synchronized with time of day
+    return `Mabuhay & ${timeGreetingEn.toLowerCase()}${nameBold}! 🌴 (${timeGreetingBis} • ${timeGreetingFil})`;
   }
 
   const timeGreeting = getTimeGreeting('English', date);
   return `Mabuhay & ${timeGreeting.toLowerCase()}${nameBold}! 🌴`;
+}
+
+/**
+ * Returns a time-synchronized subtitle description for the Byahedor AI Concierge.
+ * Dynamically reflects the current time of day across Bisaya, Filipino, and English.
+ */
+export function getConciergeHeaderDescription(
+  language: SupportedLanguage = 'Auto',
+  date: Date = new Date()
+): string {
+  const time = getTimeOfDay(date);
+
+  switch (language) {
+    case 'Bisaya': {
+      if (time === 'morning') {
+        return '☀️ Maayong buntag ug maayong adlaw • Island guide & voice concierge';
+      }
+      if (time === 'noon') {
+        return '☀️ Maayong udto ug maayong adlaw • Island guide & voice concierge';
+      }
+      if (time === 'afternoon') {
+        return '🌴 Maayong hapon ug maayong adlaw • Island guide & voice concierge';
+      }
+      return '🌙 Maayong gabii • Island guide, vision & voice concierge';
+    }
+    case 'Filipino': {
+      if (time === 'morning') {
+        return '☀️ Magandang umaga • Island guide, vision & voice concierge';
+      }
+      if (time === 'noon') {
+        return '☀️ Magandang tanghali • Island guide, vision & voice concierge';
+      }
+      if (time === 'afternoon') {
+        return '🌴 Magandang hapon • Island guide, vision & voice concierge';
+      }
+      return '🌙 Magandang gabi • Island guide, vision & voice concierge';
+    }
+    case 'English': {
+      if (time === 'morning') {
+        return '☀️ Good morning • Island guide, vision & voice concierge';
+      }
+      if (time === 'noon' || time === 'afternoon') {
+        return '🌴 Good afternoon • Island guide, vision & voice concierge';
+      }
+      return '🌙 Good evening • Island guide, vision & voice concierge';
+    }
+    case 'Auto':
+    default: {
+      if (time === 'morning') {
+        return '☀️ Maayong buntag • Magandang umaga • Good morning concierge';
+      }
+      if (time === 'noon') {
+        return '☀️ Maayong udto • Magandang tanghali • Good day concierge';
+      }
+      if (time === 'afternoon') {
+        return '🌴 Maayong adlaw • Magandang hapon • Good afternoon concierge';
+      }
+      return '🌙 Maayong gabii • Magandang gabi • Good evening concierge';
+    }
+  }
 }
 
 /**

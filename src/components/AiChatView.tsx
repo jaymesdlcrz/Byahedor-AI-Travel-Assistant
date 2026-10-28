@@ -33,10 +33,12 @@ import { ChatMessage, ChatAttachment } from '../types';
 import { useAuth } from '../firebase/context';
 import { 
   getTimeGreeting, 
+  getBisayaGreeting,
   formatPersonalizedGreeting, 
   getTimeOfDay, 
   SupportedLanguage, 
-  detectLanguageFromText 
+  detectLanguageFromText,
+  getConciergeHeaderDescription
 } from '../utils/greetings';
 
 interface AiChatViewProps {
@@ -54,13 +56,23 @@ interface LocalAttachedFile {
 
 const getInitialMessages = (
   user?: { displayName?: string | null; email?: string | null } | null,
-  language: SupportedLanguage = 'Auto'
+  language: SupportedLanguage = 'Auto',
+  now: Date = new Date()
 ): ChatMessage[] => {
-  const greetingHeader = formatPersonalizedGreeting(language, user?.displayName);
+  const time = getTimeOfDay(now);
+  const greetingHeader = formatPersonalizedGreeting(language, user?.displayName, now);
   
   let welcomeBody = '';
   if (language === 'Bisaya') {
-    welcomeBody = `${greetingHeader} Ako si **Byahedor**, imong Bisaya AI travel guide ug companion sa tibuok Pilipinas!
+    const timeBisayaClosing = time === 'evening' 
+      ? 'Maayong gabii kanimo!' 
+      : time === 'morning' 
+      ? 'Maayong buntag ug maayong adlaw kanimo!' 
+      : time === 'noon' 
+      ? 'Maayong udto ug maayong adlaw kanimo!' 
+      : 'Maayong hapon ug maayong adlaw kanimo!';
+
+    welcomeBody = `${greetingHeader} Ako si **Byahedor**, imong Bisaya AI travel concierge ug companion sa tibuok Pilipinas!
 
 Gikan sa mga tinagong white-sand beaches sa **Palawan**, surfing sa Cloud 9 sa **Siargao**, canyoneering sa **Kawasan Cebu**, hangtod sa lami nga **Bacolod chicken inasal**, andam ko mogiya nimo matag adlaw!
 
@@ -68,8 +80,16 @@ Gikan sa mga tinagong white-sand beaches sa **Palawan**, surfing sa Cloud 9 sa *
 - 📎 **Upload og Travel Files:** I-upload ang picture sa mga isla o carinderia aron mahibaloan, o boarding pass ug ferry tickets aron masusi ang skedyul ug presyo.
 - 🎙️ **Voice Speech-to-Text:** Pindota ang mikropono para makig-istorya nako pinaagi sa tingog sa Bisaya, Tagalog, o English!
 
-Asa man imong sunod nga laag o byahe karon? Maayong adlaw kanimo!`;
+Asa man imong sunod nga laag o byahe karon? ${timeBisayaClosing}`;
   } else if (language === 'Filipino') {
+    const timeFilipinoClosing = time === 'evening'
+      ? 'Magandang gabi sa iyo! Saan ang susunod mong byahe? Tara, kwentuhan tayo!'
+      : time === 'morning'
+      ? 'Magandang umaga sa iyo! Saan ang susunod mong byahe ngayon? Tara, kwentuhan tayo!'
+      : time === 'noon'
+      ? 'Magandang tanghali sa iyo! Saan ang susunod mong byahe ngayon? Tara, kwentuhan tayo!'
+      : 'Magandang hapon sa iyo! Saan ang susunod mong byahe ngayon? Tara, kwentuhan tayo!';
+
     welcomeBody = `${greetingHeader} Ako si **Byahedor**, ang iyong personal AI Philippine travel concierge!
 
 Naghahanap ka ba ng secret beaches sa **Palawan**, surfing trip sa **Siargao**, canyoneering adventure sa **Cebu**, o authentic food trip sa **Bacolod at Iloilo**? Nandito ako para alalayan ka sa bawat hakbang ng byahe!
@@ -78,25 +98,30 @@ Naghahanap ka ba ng secret beaches sa **Palawan**, surfing trip sa **Siargao**, 
 - 📎 **Mag-upload ng Travel Files:** Mag-share ng litrato ng tourist spots para ma-identify, litrato ng menu para ma-translate, o e-tickets para ma-check ang oras at pamasahe.
 - 🎙️ **Voice Speech-to-Text:** I-tap ang microphone icon para magsalita nang natural sa Tagalog, Bisaya, o English!
 
-Saan mo gustong mag-byahe ngayon? Tara, kwentuhan tayo!`;
+${timeFilipinoClosing}`;
   } else if (language === 'Auto') {
+    const timeGreetingBis = getTimeGreeting('Bisaya', now);
+    const timeGreetingFil = getTimeGreeting('Filipino', now);
+    const timeGreetingEn = getTimeGreeting('English', now);
+
     welcomeBody = `${greetingHeader}
 
 I'm **Byahedor**, your multilingual AI Philippine travel concierge! 🌴
 
 Makipag-usap o magtanong sa **English**, **Tagalog / Filipino**, o **Bisaya** — kusa akong sasagot at mag-aadjust sa salitang gamit mo!
 
-✨ **Multilingual Travel Concierge (EN • FIL • BIS):**
-- 🏝️ **Bisaya:** *Maayong adlaw!* Pangutana bahin sa mga tinagong isla, pletehan sa barko ug habal-habal, o lami nga kan-anan sa Cebu, Bohol, Siargao, ug Davao.
-- 🏖️ **Filipino / Tagalog:** *Magandang araw!* Alamin ang DIY itineraries, estimated budget sa bawat sakay, at pagkain sa Luzon, Visayas, at Mindanao.
-- ✈️ **English:** Detailed day-by-day itineraries, packing guides, and flight/ferry logistics in ₱ PHP.
+✨ **Multilingual Travel Concierge (${timeGreetingBis} • ${timeGreetingFil} • ${timeGreetingEn}):**
+- 🏝️ **Bisaya:** *${getBisayaGreeting(time)}!* Pangutana bahin sa mga tinagong isla, pletehan sa barko ug habal-habal, o lami nga kan-anan sa Cebu, Bohol, Siargao, ug Davao.
+- 🏖️ **Filipino / Tagalog:** *${timeGreetingFil}!* Alamin ang DIY itineraries, estimated budget sa bawat sakay, at pagkain sa Luzon, Visayas, at Mindanao.
+- ✈️ **English:** *${timeGreetingEn}!* Detailed day-by-day itineraries, packing guides, and flight/ferry logistics in ₱ PHP.
 
 - 📎 **Upload Travel Files:** Share photos of landmarks to identify, carinderia menus to translate, or flight & ferry e-tickets.
 - 🎙️ **Voice Speech-to-Text:** Tap the mic to ask travel questions naturally in English, Filipino, or Bisaya!
 
 Asa man imong sunod nga byahe? Saan ang susunod mong gala? Where would you like to travel next?`;
   } else {
-    welcomeBody = `${greetingHeader} I'm **Byahedor**, your friendly AI Philippine travel companion!
+    const timeGreetingEn = getTimeGreeting('English', now);
+    welcomeBody = `${greetingHeader} I'm **Byahedor**, your friendly AI Philippine travel concierge & companion!
 
 Whether you're looking for secret beaches in **Palawan**, planning a surfing trip to **Siargao**, budgeting for **Cebu canyoneering**, or craving authentic **Bacolod chicken inasal**, I'm here to guide you every step of the way!
 
@@ -104,7 +129,7 @@ Whether you're looking for secret beaches in **Palawan**, planning a surfing tri
 - 📎 **Upload Travel Files:** Share photos of landmarks to identify them, carinderia menus to translate, or flight/ferry e-tickets and itineraries to analyze.
 - 🎙️ **Voice Speech-to-Text:** Tap the microphone icon to speak your travel questions naturally in English, Filipino, or Bisaya!
 
-How can I help you plan your next *byahe* today? (You can chat with me in English, Tagalog, or Bisaya!)`;
+${timeGreetingEn}! How can I help you plan your next *byahe* today? (You can chat with me in English, Tagalog, or Bisaya!)`;
   }
 
   return [
@@ -112,7 +137,7 @@ How can I help you plan your next *byahe* today? (You can chat with me in Englis
       id: `msg-welcome-${Date.now()}`,
       sender: 'ai',
       text: welcomeBody,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      timestamp: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     }
   ];
 };
@@ -182,6 +207,15 @@ export const AiChatView: React.FC<AiChatViewProps> = ({
   const [activePromptCategory, setActivePromptCategory] = useState<PromptCategory>('all');
   const [showPrompts, setShowPrompts] = useState(false);
   const [userHasScrolledUp, setUserHasScrolledUp] = useState(false);
+  const [currentDate, setCurrentDate] = useState<Date>(() => new Date());
+
+  // Minute ticker to keep time-synchronized greetings and concierge descriptions updated
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentDate(new Date());
+    }, 60000);
+    return () => clearInterval(timer);
+  }, []);
 
   // File upload state
   const [attachedFile, setAttachedFile] = useState<LocalAttachedFile | null>(null);
@@ -624,7 +658,7 @@ export const AiChatView: React.FC<AiChatViewProps> = ({
       window.speechSynthesis.cancel();
     }
     setSpeakingId(null);
-    const fresh = getInitialMessages(currentUser, selectedLanguage);
+    const fresh = getInitialMessages(currentUser, selectedLanguage, new Date());
     setMessages(fresh);
     localStorage.removeItem(chatStorageKey);
     if (!currentUser) {
@@ -636,7 +670,7 @@ export const AiChatView: React.FC<AiChatViewProps> = ({
     setSelectedLanguage(lang);
     // If conversation only contains the welcome message, dynamically refresh it in the selected language with current time greeting
     if (messages.length === 1 && messages[0].sender === 'ai' && messages[0].id.startsWith('msg-welcome')) {
-      const refreshedWelcome = getInitialMessages(currentUser, lang);
+      const refreshedWelcome = getInitialMessages(currentUser, lang, new Date());
       setMessages(refreshedWelcome);
     }
   };
@@ -722,7 +756,7 @@ export const AiChatView: React.FC<AiChatViewProps> = ({
               </span>
             </div>
             <p className="text-[10px] text-[#627D98] dark:text-slate-400 truncate">
-              Island guide, vision & voice concierge
+              {getConciergeHeaderDescription(selectedLanguage, currentDate)}
             </p>
           </div>
         </div>
@@ -741,8 +775,8 @@ export const AiChatView: React.FC<AiChatViewProps> = ({
                 }`}
                 title={
                   lang === 'Auto'
-                    ? 'Multilingual auto-detect: replies in English, Tagalog, or Bisaya based on your message'
-                    : `Chat in ${lang} (${getTimeGreeting(lang)})`
+                    ? `Multilingual auto-detect: replies in English, Tagalog, or Bisaya (${getConciergeHeaderDescription('Auto', currentDate)})`
+                    : `Chat in ${lang} (${getTimeGreeting(lang, currentDate)})`
                 }
               >
                 {lang === 'Auto' ? 'Auto' : lang === 'English' ? 'EN' : lang === 'Filipino' ? 'FIL' : 'BIS'}
