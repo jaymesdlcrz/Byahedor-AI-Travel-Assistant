@@ -120,6 +120,14 @@ export default function App() {
     return () => window.visualViewport?.removeEventListener('resize', handleViewport);
   }, []);
 
+  // Google Maps Platform quota listener (SKILL.md Section 8 Case A)
+  const [mapsQuotaExceeded, setMapsQuotaExceeded] = useState(false);
+  useEffect(() => {
+    const handleQuota = () => setMapsQuotaExceeded(true);
+    window.addEventListener('gmp-quota-exceeded', handleQuota);
+    return () => window.removeEventListener('gmp-quota-exceeded', handleQuota);
+  }, []);
+
   // Saved trips state scoped per user
   const [savedTrips, setSavedTrips] = useState<TripPlan[]>(() => {
     return loadSavedTripsForUser(currentUser?.uid);
@@ -445,6 +453,24 @@ export default function App() {
       <div className={`flex-1 flex flex-col min-w-0 w-full ${
         currentView === 'chat' ? 'h-full overflow-hidden' : 'overflow-x-hidden'
       }`}>
+        {/* Google Maps Quota Defense Banner (SKILL.md Section 8 Case A) */}
+        {mapsQuotaExceeded && (
+          <div className="bg-amber-50 dark:bg-amber-950/80 border-b border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-200 px-4 py-2 text-xs md:text-sm text-center sticky top-0 z-50 shadow-sm flex items-center justify-center gap-2">
+            <span>
+              Google Maps Platform quota reached. If you are the app owner, visit{' '}
+              <a
+                href="https://developers.google.com/maps/ai/ai-studio?utm_campaign=gmp_mcp_codeassist_v1_aistudio#quota_exceeded_errors"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline font-semibold text-amber-950 dark:text-amber-100 hover:text-amber-800"
+              >
+                maps developer site
+              </a>{' '}
+              for instructions to update your account.
+            </span>
+          </div>
+        )}
+
         {/* Mobile Header & Bottom Navigation */}
         <MobileNav
           currentView={currentView}

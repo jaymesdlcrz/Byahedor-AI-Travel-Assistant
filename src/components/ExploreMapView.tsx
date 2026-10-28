@@ -1,4 +1,11 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { 
+  APIProvider, 
+  Map as GoogleMap, 
+  AdvancedMarker, 
+  InfoWindow, 
+  useMap 
+} from '@vis.gl/react-google-maps';
 import { 
   MapPin, 
   Compass, 
@@ -21,7 +28,10 @@ import {
   ExternalLink,
   ChevronRight,
   ShieldAlert,
-  Wind
+  Wind,
+  Globe,
+  Map as MapIcon,
+  LocateFixed
 } from 'lucide-react';
 import { DESTINATIONS } from '../data/destinations';
 import { Destination } from '../types';
@@ -29,6 +39,41 @@ import { Destination } from '../types';
 interface ExploreMapViewProps {
   onStartPlanning: (destName: string) => void;
   onSelectDestination: (dest: Destination) => void;
+}
+
+const GOOGLE_MAPS_API_KEY = (import.meta as any).env?.VITE_GOOGLE_MAPS_API_KEY || 'AIzaSyDVIVQYonip5lXMI3_r4ml5xxWzz9yUGFw';
+
+// Regional Camera Targets for Google Maps navigation
+export type RegionFilter = 'All' | 'Luzon' | 'Visayas' | 'Mindanao' | 'Palawan';
+
+export interface CameraTarget {
+  center: { lat: number; lng: number };
+  zoom: number;
+}
+
+const REGION_CAMERA_TARGETS: Record<RegionFilter, CameraTarget> = {
+  All: { center: { lat: 12.8797, lng: 121.7740 }, zoom: 6 },
+  Luzon: { center: { lat: 16.5, lng: 121.0 }, zoom: 7 },
+  Visayas: { center: { lat: 10.5, lng: 123.5 }, zoom: 7.5 },
+  Mindanao: { center: { lat: 7.8, lng: 125.0 }, zoom: 7 },
+  Palawan: { center: { lat: 10.2, lng: 119.0 }, zoom: 7.5 }
+};
+
+// Smooth camera controller component for @vis.gl/react-google-maps
+function MapCameraController({ 
+  center, 
+  zoom 
+}: { 
+  center: { lat: number; lng: number }; 
+  zoom: number; 
+}) {
+  const map = useMap();
+  useEffect(() => {
+    if (!map) return;
+    map.panTo(center);
+    map.setZoom(zoom);
+  }, [map, center.lat, center.lng, zoom]);
+  return null;
 }
 
 // Bounding box for Philippine Archipelago geographic coordinates
@@ -58,7 +103,6 @@ function projectGeo(lat: number, lng: number, viewBoxWidth = 600, viewBoxHeight 
 
 export type RouteId = 'all' | 'palawan-loop' | 'visayas-trio' | 'cordillera-trail' | 'siargao-surf' | 'volcano-corridor';
 export type MapLayer = 'all' | 'lanes' | 'climate';
-export type RegionFilter = 'All' | 'Luzon' | 'Visayas' | 'Mindanao' | 'Palawan';
 
 interface RouteDefinition {
   id: RouteId;
@@ -79,6 +123,12 @@ export const ExploreMapView: React.FC<ExploreMapViewProps> = ({
   const [activeLayer, setActiveLayer] = useState<MapLayer>('lanes');
   const [zoomLevel, setZoomLevel] = useState<number>(1);
   const [hoveredDest, setHoveredDest] = useState<Destination | null>(null);
+
+  // Google Maps specific states
+  const [mapEngine, setMapEngine] = useState<'google' | 'vector'>('google');
+  const [googleMapType, setGoogleMapType] = useState<'roadmap' | 'satellite' | 'terrain' | 'hybrid'>('roadmap');
+  const [infoWindowDest, setInfoWindowDest] = useState<Destination | null>(null);
+  const [cameraState, setCameraState] = useState<CameraTarget>(REGION_CAMERA_TARGETS.All);
 
   const routes: RouteDefinition[] = [
     {
@@ -388,7 +438,15 @@ export const ExploreMapView: React.FC<ExploreMapViewProps> = ({
                     // Automatically focus first destination in route if available
                     if (r.destinationIds.length > 0) {
                       const first = DESTINATIONS.find(d => d.id === r.destinationIds[0]);
-                      if (first) setSelectedPin(first);
+                      if (first) {
+                        setSelectedPin(first);
+                        setCameraState({
+                          center: { lat: first.coordinates.lat, lng: first.coordinates.lng },
+                          zoom: 8.5
+                        });
+                      }
+                    } else {
+                      setCameraState(REGION_CAMERA_TARGETS.All);
                     }
                   }}
                   className={`px-3.5 py-2 rounded-2xl text-xs font-bold transition-all shrink-0 flex items-center gap-2 active:scale-95 ${
@@ -417,7 +475,10 @@ export const ExploreMapView: React.FC<ExploreMapViewProps> = ({
           {(['All', 'Luzon', 'Visayas', 'Mindanao', 'Palawan'] as RegionFilter[]).map((reg) => (
             <button
               key={reg}
-              onClick={() => setActiveRegion(reg)}
+              onClick={() => {
+                setActiveRegion(reg);
+                setCameraState(REGION_CAMERA_TARGETS[reg]);
+              }}
               className={`px-3 py-1 rounded-xl text-xs font-bold transition-all shrink-0 active:scale-95 ${
                 activeRegion === reg
                   ? 'bg-slate-800 text-white dark:bg-slate-200 dark:text-slate-900 shadow-2xs'
@@ -435,48 +496,221 @@ export const ExploreMapView: React.FC<ExploreMapViewProps> = ({
         {/* Interactive Stylized Philippine Vector Map */}
         <div className="lg:col-span-7 bg-white dark:bg-[#0f233a] rounded-3xl p-4 sm:p-5 border border-slate-200/80 dark:border-slate-800 shadow-sm relative overflow-hidden flex flex-col">
           {/* Top Bar of Map Controls */}
-          <div className="flex items-center justify-between mb-3 z-10">
-            <div className="flex items-center gap-2">
-              <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-[#087EA4]/10 text-[#087EA4] dark:text-[#4DB8E8] flex items-center gap-1.5">
-                <Compass className="w-3.5 h-3.5" />
-                <span>PH Archipelago Projection</span>
-              </span>
-              <span className="hidden sm:inline text-[11px] text-slate-400 dark:text-slate-500">
-                Lat 4.5°N - 21.5°N
-              </span>
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-3 z-10">
+            {/* Map Mode Switcher: Google Maps vs Vector Sea Lanes */}
+            <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800/80 p-1 rounded-2xl border border-slate-200/80 dark:border-slate-700/80">
+              <button
+                onClick={() => setMapEngine('google')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                  mapEngine === 'google'
+                    ? 'bg-[#087EA4] text-white shadow-2xs'
+                    : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <Globe className="w-3.5 h-3.5" />
+                <span>Google Maps</span>
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              </button>
+
+              <button
+                onClick={() => setMapEngine('vector')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                  mapEngine === 'vector'
+                    ? 'bg-[#087EA4] text-white shadow-2xs'
+                    : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <Compass className="w-3.5 h-3.5 text-[#FFB84D]" />
+                <span>Sea Lanes Vector</span>
+              </button>
             </div>
 
             {/* Map Action Buttons */}
-            <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800/80 p-1 rounded-xl border border-slate-200/60 dark:border-slate-700/60">
-              <button
-                onClick={() => handleZoom(0.25)}
-                title="Zoom In"
-                aria-label="Zoom In"
-                className="p-1.5 text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 rounded-lg transition-colors"
-              >
-                <ZoomIn className="w-3.5 h-3.5" />
-              </button>
-              <button
-                onClick={() => handleZoom(-0.25)}
-                title="Zoom Out"
-                aria-label="Zoom Out"
-                className="p-1.5 text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 rounded-lg transition-colors"
-              >
-                <ZoomOut className="w-3.5 h-3.5" />
-              </button>
-              <button
-                onClick={handleResetZoom}
-                title="Reset View"
-                aria-label="Reset View"
-                className="p-1.5 text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 rounded-lg transition-colors"
-              >
-                <RotateCcw className="w-3.5 h-3.5" />
-              </button>
-            </div>
+            {mapEngine === 'google' ? (
+              <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800/80 p-1 rounded-xl border border-slate-200/60 dark:border-slate-700/60 text-xs">
+                {(['roadmap', 'satellite', 'terrain'] as const).map((type) => (
+                  <button
+                    key={type}
+                    onClick={() => setGoogleMapType(type)}
+                    className={`px-2 py-1 rounded-lg font-bold capitalize transition-all ${
+                      googleMapType === type
+                        ? 'bg-white dark:bg-slate-700 text-[#087EA4] dark:text-[#4DB8E8] shadow-2xs'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                  >
+                    {type}
+                  </button>
+                ))}
+                <div className="w-[1px] h-3 bg-slate-300 dark:bg-slate-700 mx-0.5" />
+                <button
+                  onClick={() => {
+                    setActiveRegion('All');
+                    setCameraState(REGION_CAMERA_TARGETS.All);
+                    setInfoWindowDest(null);
+                  }}
+                  title="Recenter Philippines"
+                  aria-label="Recenter Philippines"
+                  className="p-1 text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 rounded-lg transition-colors flex items-center gap-1 px-1.5 text-[11px] font-semibold"
+                >
+                  <LocateFixed className="w-3.5 h-3.5 text-[#087EA4]" />
+                  <span className="hidden sm:inline">Recenter</span>
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800/80 p-1 rounded-xl border border-slate-200/60 dark:border-slate-700/60">
+                <button
+                  onClick={() => handleZoom(0.25)}
+                  title="Zoom In"
+                  aria-label="Zoom In"
+                  className="p-1.5 text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 rounded-lg transition-colors"
+                >
+                  <ZoomIn className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={() => handleZoom(-0.25)}
+                  title="Zoom Out"
+                  aria-label="Zoom Out"
+                  className="p-1.5 text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 rounded-lg transition-colors"
+                >
+                  <ZoomOut className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={handleResetZoom}
+                  title="Reset View"
+                  aria-label="Reset View"
+                  className="p-1.5 text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 rounded-lg transition-colors"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
           </div>
 
-          {/* SVG Map Canvas Viewport with Ocean Gradient */}
-          <div className="relative w-full h-[480px] sm:h-[620px] bg-gradient-to-b from-[#EBF5FB] via-[#E0F2FE] to-[#D9EEF9] dark:from-[#08192E] dark:via-[#0A1F38] dark:to-[#071526] rounded-2xl border border-slate-200/90 dark:border-slate-800 p-2 sm:p-4 flex items-center justify-center overflow-hidden select-none">
+          {/* Map Canvas Viewport Area */}
+          {mapEngine === 'google' ? (
+            <div className="relative w-full h-[500px] sm:h-[640px] rounded-2xl overflow-hidden border border-slate-200/90 dark:border-slate-800 shadow-inner bg-slate-100 dark:bg-slate-900">
+              <APIProvider apiKey={GOOGLE_MAPS_API_KEY} language="en" region="PH">
+                <GoogleMap
+                  id="philippine-google-map"
+                  mapId="DEMO_MAP_ID"
+                  defaultCenter={REGION_CAMERA_TARGETS.All.center}
+                  defaultZoom={6}
+                  gestureHandling="greedy"
+                  mapTypeId={googleMapType}
+                  disableDefaultUI={false}
+                  zoomControl={true}
+                  streetViewControl={false}
+                  mapTypeControl={false}
+                  fullscreenControl={true}
+                  internalUsageAttributionIds={['gmp_mcp_codeassist_v1_aistudio']}
+                  style={{ width: '100%', height: '100%' }}
+                >
+                  <MapCameraController center={cameraState.center} zoom={cameraState.zoom} />
+
+                  {filteredDestinations.map((dest) => {
+                    const isSelected = selectedPin.id === dest.id;
+                    return (
+                      <AdvancedMarker
+                        key={dest.id}
+                        position={{ lat: dest.coordinates.lat, lng: dest.coordinates.lng }}
+                        title={dest.name}
+                        onClick={() => {
+                          setSelectedPin(dest);
+                          setInfoWindowDest(dest);
+                          setCameraState({
+                            center: { lat: dest.coordinates.lat, lng: dest.coordinates.lng },
+                            zoom: 9
+                          });
+                        }}
+                      >
+                        <div
+                          className={`group cursor-pointer flex flex-col items-center transition-all ${
+                            isSelected ? 'scale-110 z-30' : 'hover:scale-105 z-10'
+                          }`}
+                        >
+                          <div
+                            className={`px-2 py-1 rounded-full text-[10px] font-bold shadow-md flex items-center gap-1.5 transition-all ${
+                              isSelected
+                                ? 'bg-[#087EA4] text-white ring-2 ring-white dark:ring-slate-900 shadow-lg'
+                                : 'bg-white/95 dark:bg-[#0f233a]/95 text-slate-800 dark:text-slate-100 border border-slate-200/80 dark:border-slate-700/80 hover:bg-[#087EA4] hover:text-white'
+                            }`}
+                          >
+                            <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                            <span className="truncate max-w-[95px]">{dest.name}</span>
+                            <span className="text-[9px] opacity-85 font-normal">
+                              ₱{(dest.estimatedDailyBudgetPHP / 1000).toFixed(1)}k
+                            </span>
+                          </div>
+                          <div
+                            className={`w-2 h-2 rotate-45 -mt-1 ${
+                              isSelected ? 'bg-[#087EA4]' : 'bg-white dark:bg-[#0f233a]'
+                            }`}
+                          />
+                        </div>
+                      </AdvancedMarker>
+                    );
+                  })}
+
+                  {infoWindowDest && (
+                    <InfoWindow
+                      position={{
+                        lat: infoWindowDest.coordinates.lat,
+                        lng: infoWindowDest.coordinates.lng
+                      }}
+                      onCloseClick={() => setInfoWindowDest(null)}
+                      pixelOffset={[0, -28]}
+                    >
+                      <div className="p-1 max-w-[220px] text-slate-800 select-text font-sans">
+                        <img
+                          src={infoWindowDest.heroImage}
+                          alt={infoWindowDest.name}
+                          className="w-full h-24 object-cover rounded-lg mb-2 shadow-2xs"
+                          referrerPolicy="no-referrer"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src =
+                              'https://upload.wikimedia.org/wikipedia/commons/4/45/Cloud_9_Boardwalk%2C_Siargao.jpg';
+                          }}
+                        />
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-[#087EA4]/10 text-[#087EA4] uppercase">
+                            {infoWindowDest.region}
+                          </span>
+                          <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">
+                            ★ {infoWindowDest.rating}
+                          </span>
+                        </div>
+                        <h4 className="font-bold text-xs text-[#102A43] leading-snug mb-0.5">
+                          {infoWindowDest.name}
+                        </h4>
+                        <p className="text-[10px] text-slate-500 mb-1.5 truncate">
+                          📍 {infoWindowDest.location}
+                        </p>
+                        <div className="text-[11px] font-extrabold text-[#39A96B] mb-2">
+                          ₱{infoWindowDest.estimatedDailyBudgetPHP.toLocaleString()} / day
+                        </div>
+                        <div className="grid grid-cols-2 gap-1.5">
+                          <button
+                            onClick={() => onSelectDestination(infoWindowDest)}
+                            className="py-1 px-2 text-[10px] font-bold rounded-md bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors"
+                          >
+                            Full Guide
+                          </button>
+                          <button
+                            onClick={() => onStartPlanning(infoWindowDest.name)}
+                            className="py-1 px-2 text-[10px] font-bold rounded-md bg-[#087EA4] hover:bg-[#076c8c] text-white transition-colors"
+                          >
+                            Plan Trip
+                          </button>
+                        </div>
+                      </div>
+                    </InfoWindow>
+                  )}
+                </GoogleMap>
+              </APIProvider>
+            </div>
+          ) : (
+            /* SVG Map Canvas Viewport with Ocean Gradient */
+            <div className="relative w-full h-[480px] sm:h-[620px] bg-gradient-to-b from-[#EBF5FB] via-[#E0F2FE] to-[#D9EEF9] dark:from-[#08192E] dark:via-[#0A1F38] dark:to-[#071526] rounded-2xl border border-slate-200/90 dark:border-slate-800 p-2 sm:p-4 flex items-center justify-center overflow-hidden select-none">
             {/* Nautical Coordinate Grid Lines */}
             <div className="absolute inset-0 opacity-20 pointer-events-none">
               <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
@@ -1130,8 +1364,25 @@ export const ExploreMapView: React.FC<ExploreMapViewProps> = ({
               </div>
             )}
           </div>
+        )}
 
-          {/* Map Legend & Sea Lane Guide */}
+        {/* Map Legend: Google Maps vs Vector */}
+        {mapEngine === 'google' ? (
+          <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800/80 flex flex-wrap items-center justify-between gap-2 text-[11px]">
+            <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-400">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-emerald-200 dark:ring-emerald-900" />
+              <span>24+ Live Philippine Locations</span>
+            </div>
+            <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-400">
+              <MapPin className="w-3.5 h-3.5 text-[#087EA4]" />
+              <span>Click Pin for InfoWindow & AI Planning</span>
+            </div>
+            <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-400">
+              <Globe className="w-3.5 h-3.5 text-[#39A96B]" />
+              <span>Roadmap, Satellite & Terrain Layers</span>
+            </div>
+          </div>
+        ) : (
           <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800/80 grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
             <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-400">
               <span className="w-3 h-0.5 bg-[#087EA4] border-t border-dashed border-[#087EA4]" />
@@ -1156,7 +1407,8 @@ export const ExploreMapView: React.FC<ExploreMapViewProps> = ({
               <span>Selected Stop</span>
             </div>
           </div>
-        </div>
+        )}
+      </div>
 
         {/* Selected Destination Detailed Inspector Card & Route Connections */}
         <div className="lg:col-span-5 space-y-4">
