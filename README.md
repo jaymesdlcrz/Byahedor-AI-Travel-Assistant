@@ -114,23 +114,55 @@ cd byahedor
 npm install
 ```
 
-### 2. Environment Variables
+### 2. Environment Variables & Secret Protection
 
-Create a `.env` file in the root directory (refer to `.env.example`):
+Byahedor strictly loads all Gemini AI credentials server-side via the `@google/genai` TypeScript SDK using `process.env.GEMINI_API_KEY`. **No API keys are hardcoded in the codebase.**
+
+#### Step 2.1: Copy the Template
+Copy the provided `.env.example` file to create your local `.env`:
+
+```bash
+cp .env.example .env
+```
+
+#### Step 2.2: Add Your Gemini API Key
+Open `.env` and insert your Gemini API key obtained from [Google AI Studio](https://aistudio.google.com/):
 
 ```env
 # Google Gemini API Key (Required for AI Concierge, Planner, Budget & Checklist)
-GEMINI_API_KEY=your_gemini_api_key_here
+GEMINI_API_KEY=your_actual_gemini_api_key_here
 
-# Google Maps Platform API Key (Optional client-side key for interactive maps)
-VITE_GOOGLE_MAPS_API_KEY=your_google_maps_api_key_here
+# Google Maps Platform API Key (Optional client-side key; demo key used if left empty)
+VITE_GOOGLE_MAPS_API_KEY=
 
 # Dev Server Port (defaults to 3000)
 PORT=3000
 
-# Base App URL (injected automatically in deployment)
+# Base App URL
 APP_URL=http://localhost:3000
 ```
+
+#### Step 2.3: Prevent Secret Leaks in Git (.gitignore)
+The repository includes a `.gitignore` configured to ensure that `.env` and any local credentials can never be committed or pushed to GitHub:
+
+```gitignore
+# Protect sensitive keys (like GEMINI_API_KEY) from being pushed to GitHub
+.env
+.env*.local
+.env.development
+.env.test
+.env.production
+.env*
+# Do not ignore the public template:
+!.env.example
+```
+
+**Verification Check**:
+Before committing or pushing to GitHub, you can verify that `.env` is ignored by running:
+```bash
+git status --ignored
+```
+You should see `.env` listed under ignored files, ensuring your keys stay private and safe!
 
 ### 3. Run Development Server
 

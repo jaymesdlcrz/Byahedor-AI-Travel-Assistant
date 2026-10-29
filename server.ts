@@ -26,10 +26,9 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
 }
 
 const CANDIDATE_AI_MODELS = [
-  "gemini-flash-lite-latest",
-  "gemini-3-flash-preview",
   "gemini-3.8-flash",
-  "gemini-3.1-flash-lite"
+  "gemini-3.1-flash-lite",
+  "gemini-flash-latest"
 ];
 
 // Robust JSON parser for AI outputs that may contain markdown or extra wrapping
