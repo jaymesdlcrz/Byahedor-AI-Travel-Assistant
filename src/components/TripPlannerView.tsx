@@ -128,8 +128,78 @@ export const TripPlannerView: React.FC<TripPlannerViewProps> = ({
         setActiveDayIndex(0);
       }
     } catch (err: any) {
-      console.error(err);
-      setErrorMsg('Could not connect to AI service. Using instant smart itinerary model.');
+      console.warn('Backend API unavailable (static GitHub Pages or offline). Using offline smart planner fallback:', err);
+      const targetDest = DESTINATIONS.find(d => d.name.toLowerCase().includes(destination.toLowerCase())) || DESTINATIONS[0];
+      const numDays = Math.max(1, Number(days) || 3);
+      const numTravelers = Math.max(1, Number(travelers) || 2);
+      const budgetNum = Number(budget) || (numDays * 3500 * numTravelers);
+
+      const generatedDays: DayPlan[] = Array.from({ length: numDays }).map((_, idx) => {
+        const dayNum = idx + 1;
+        return {
+          dayNumber: dayNum,
+          theme: dayNum === 1 ? 'Arrival, Check-in & Sunset Coastline' : dayNum === numDays ? 'Souvenir Hunting, Coastal Cafe & Departure' : `Island Discovery & Highlights (Day ${dayNum})`,
+          activities: [
+            {
+              time: '08:00 AM',
+              activity: dayNum === 1 ? `Departure from ${origin} & Hotel Check-in` : 'Scenic Island Excursion & Coastal Views',
+              location: destination,
+              duration: '3 hours',
+              estimatedCostPHP: dayNum === 1 ? 1200 : 1800,
+              notes: dayNum === 1 ? `Arrive in ${destination}, settle into accommodation and enjoy fresh buko juice.` : `Explore landmark coves, beaches, and local sights in ${destination}.`
+            },
+            {
+              time: '12:30 PM',
+              activity: 'Authentic Filipino Boodle Fight & Seafood Lunch',
+              location: `${destination} Town Proper`,
+              duration: '1.5 hours',
+              estimatedCostPHP: 450 * numTravelers,
+              notes: 'Fresh grilled inihaw na liempo, stuffed squid, garlic rice, and mangoes served on banana leaves.'
+            },
+            {
+              time: '04:30 PM',
+              activity: 'Golden Hour Sunset Walk & Heritage Stroll',
+              location: `${destination} Bay`,
+              duration: '2 hours',
+              estimatedCostPHP: 150 * numTravelers,
+              notes: 'Watch the vibrant Philippine sunset along the coast or seaside promenade with halo-halo.'
+            }
+          ]
+        };
+      });
+
+      const fallbackPlan: TripPlan = {
+        id: `trip-${Date.now()}`,
+        title: `${numDays}-Day ${destination} Discovery Adventure`,
+        destination,
+        origin,
+        departureDate,
+        days: numDays,
+        travelers: numTravelers,
+        totalBudget: budgetNum,
+        overview: `Tailored ${numDays}-day getaway to ${destination} curated for ${numTravelers} traveler(s), covering signature attractions, authentic local cuisine, and seaside relaxation.`,
+        coverImage: targetDest.heroImage,
+        savedAt: new Date().toISOString(),
+        daysPlan: generatedDays,
+        budgetBreakdown: {
+          transportation: Math.round(budgetNum * 0.35),
+          accommodation: Math.round(budgetNum * 0.30),
+          food: Math.round(budgetNum * 0.20),
+          activities: Math.round(budgetNum * 0.10),
+          emergency: Math.round(budgetNum * 0.05)
+        },
+        localTips: [
+          'Eco-friendly reef-safe sunscreen (SPF 50+) is mandatory in local marine sanctuaries.',
+          'Bring a waterproof dry bag (15L–20L) for bangka boat transfers.',
+          'Always carry physical cash (PHP ₱) for local tricycles and island environmental fees.',
+          'Pack comfortable aqua shoes for rocky shorelines and sea urchin protection.',
+          'Download offline maps or carry a power bank as island connectivity fluctuates.'
+        ]
+      };
+
+      setCurrentPlan(fallbackPlan);
+      setActiveDayIndex(0);
+      setErrorMsg(null);
     } finally {
       setLoading(false);
     }

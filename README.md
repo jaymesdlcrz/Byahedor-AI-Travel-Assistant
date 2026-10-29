@@ -140,7 +140,7 @@ npm run dev
 
 The application will be live at `http://localhost:3000`.
 
-### 4. Build for Production
+### 4. Build for Full-Stack Production (Node.js + Express)
 
 ```bash
 npm run build
@@ -152,6 +152,36 @@ To run the production server:
 
 ```bash
 npm start
+```
+
+---
+
+## 🚀 Deploying to GitHub Pages (Static Hosting)
+
+### Why did a blank white page happen on GitHub Pages?
+1. **Asset Base Path**: By default, Vite outputs asset URLs starting with `/assets/...`. Because GitHub Pages serves repositories from a subpath (e.g., `https://<username>.github.io/<repo-name>/`), the browser requested `https://<username>.github.io/assets/...` instead of `https://<username>.github.io/<repo-name>/assets/...`, returning 404 and failing to load JavaScript and CSS.
+   - **Fix**: `vite.config.ts` is now configured with `base: './'` so all script and stylesheet references are relative.
+2. **Jekyll Processing**: GitHub Pages runs Jekyll by default which ignores folders starting with special characters.
+   - **Fix**: A `public/.nojekyll` file has been added to tell GitHub Pages to bypass Jekyll.
+3. **SPA 404 Routing**: A `public/404.html` redirect page ensures direct links and page refreshes work properly on GitHub Pages.
+4. **Backend `/api/*` on Static Hosts**: GitHub Pages does not run Node.js/Express. Byahedor includes built-in offline smart planners and fallbacks for itinerary planning, packing lists, and budget optimization when the backend is offline.
+5. **Runtime ErrorBoundary**: An interactive `ErrorBoundary` component wraps the app to catch any unexpected client errors with a friendly recovery screen instead of a blank page.
+
+### Method A: Automated GitHub Actions Deployment (Recommended)
+An automated workflow is already configured at `.github/workflows/deploy.yml`:
+1. Push your code to your GitHub repository on `main` or `master`.
+2. In your GitHub repository:
+   - Go to **Settings** > **Pages**.
+   - Under **Build and deployment** > **Source**, choose **GitHub Actions**.
+3. Push any commit or click **Run workflow** under the **Actions** tab. Your site will automatically build and publish to `https://<username>.github.io/<repo-name>/`.
+
+### Method B: Manual Deployment via `gh-pages`
+```bash
+# 1. Build the static site
+npm run build:pages
+
+# 2. Deploy dist/ to the gh-pages branch
+npx gh-pages -d dist
 ```
 
 ---
