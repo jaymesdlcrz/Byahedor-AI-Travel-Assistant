@@ -74,15 +74,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* Dark mode switch */}
         <button
           id="theme-toggle-sidebar"
+          type="button"
           onClick={onToggleDarkMode}
-          className="p-1.5 rounded-xl border border-transparent hover:border-slate-200 dark:hover:border-slate-700 bg-slate-100/70 dark:bg-slate-800/80 text-slate-500 hover:text-[#087EA4] dark:text-slate-300 dark:hover:text-[#4DB8E8] transition-all cursor-pointer active:scale-90 flex items-center justify-center shadow-2xs"
+          className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-200 active:scale-90 cursor-pointer shadow-2xs group relative border ${
+            darkMode
+              ? 'bg-amber-400/10 hover:bg-amber-400/20 text-amber-400 border-amber-400/30 hover:border-amber-400/50'
+              : 'bg-slate-100/90 hover:bg-slate-200/90 text-slate-700 hover:text-[#087EA4] border-slate-200/80 hover:border-[#087EA4]/40'
+          }`}
           title={darkMode ? "Switch to Light Mode (Daylight)" : "Switch to Dark Mode (Twilight)"}
           aria-label={darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
         >
           {darkMode ? (
-            <Sun className="w-4 h-4 text-amber-400" />
+            <Sun className="w-4.5 h-4.5 text-amber-400 fill-amber-400/20 transition-transform duration-300 group-hover:rotate-45" />
           ) : (
-            <Moon className="w-4 h-4 text-slate-600 dark:text-slate-300" />
+            <Moon className="w-4.5 h-4.5 text-slate-700 transition-transform duration-300 group-hover:-rotate-12" />
           )}
         </button>
       </div>

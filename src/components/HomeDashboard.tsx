@@ -12,7 +12,10 @@ import {
   Palmtree,
   Wallet,
   LogIn,
-  CloudCheck
+  CloudCheck,
+  Sun,
+  Moon,
+  Menu
 } from 'lucide-react';
 import { Destination, NavView } from '../types';
 import { DESTINATIONS } from '../data/destinations';
@@ -25,6 +28,8 @@ interface HomeDashboardProps {
   onStartChat: (initialPrompt?: string) => void;
   savedTripIds: string[];
   onToggleSaveDestination?: (destId: string) => void;
+  darkMode?: boolean;
+  onToggleDarkMode?: () => void;
 }
 
 export const HomeDashboard: React.FC<HomeDashboardProps> = ({
@@ -32,6 +37,8 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
   onSelectDestination,
   onStartPlanning,
   onStartChat,
+  darkMode,
+  onToggleDarkMode,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const { currentUser, openAuthModal } = useAuth();
@@ -66,37 +73,75 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
           </svg>
         </div>
 
-        <div className="relative z-10 max-w-3xl space-y-2.5 sm:space-y-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/15 backdrop-blur-md text-[10px] sm:text-[11px] font-bold text-white/95 border border-white/20">
-              <Sparkles className="w-3 h-3 text-[#FFB84D]" />
-              <span>Mabuhay! Your Intelligent Philippine Travel Companion</span>
+        <div className="relative z-10 space-y-2.5 sm:space-y-3">
+          <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
+            <div className="max-w-3xl space-y-2.5 sm:space-y-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/15 backdrop-blur-md text-[10px] sm:text-[11px] font-bold text-white/95 border border-white/20">
+                  <Sparkles className="w-3 h-3 text-[#FFB84D]" />
+                  <span>Mabuhay! Your Intelligent Philippine Travel Companion</span>
+                </div>
+
+                {currentUser ? (
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/25 backdrop-blur-md text-[10px] sm:text-[11px] font-bold text-white border border-emerald-400/40">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    <span>Hi, {currentUser.displayName || currentUser.email?.split('@')[0]}</span>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => openAuthModal('signin')}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-md text-[10px] sm:text-[11px] font-bold text-white border border-white/25 transition-all cursor-pointer active:scale-95"
+                  >
+                    <LogIn className="w-3 h-3 text-[#FFB84D]" />
+                    <span>Sign In (Google Sync)</span>
+                  </button>
+                )}
+              </div>
+
+              <h1 className="text-fluid-hero font-extrabold font-heading tracking-tight text-white">
+                Where will your next <span className="text-[#FFB84D]">journey</span> take you?
+              </h1>
+
+              <p className="text-fluid-subtitle text-white/90 font-normal leading-relaxed">
+                Let Byahedor help you plan the perfect escape with personalized itineraries, real budgets in ₱, and local secrets.
+              </p>
             </div>
 
-            {currentUser ? (
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/25 backdrop-blur-md text-[10px] sm:text-[11px] font-bold text-white border border-emerald-400/40">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                <span>Hi, {currentUser.displayName || currentUser.email?.split('@')[0]}</span>
+            {/* Quick Dashboard Controls on Desktop Screens */}
+            {onToggleDarkMode && (
+              <div className="hidden lg:flex items-center gap-2 shrink-0 pt-0.5">
+                <button
+                  type="button"
+                  onClick={onToggleDarkMode}
+                  className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-all duration-200 active:scale-90 cursor-pointer shadow-xs group border backdrop-blur-md ${
+                    darkMode
+                      ? 'bg-amber-400/20 hover:bg-amber-400/30 text-amber-300 border-amber-300/40 shadow-amber-400/10'
+                      : 'bg-white/20 hover:bg-white/30 text-white border-white/25 shadow-black/10'
+                  }`}
+                  title={darkMode ? "Switch to Light Mode (Daylight)" : "Switch to Dark Mode (Twilight)"}
+                  aria-label="Toggle Dark Mode"
+                >
+                  {darkMode ? (
+                    <Sun className="w-4.5 h-4.5 text-amber-300 fill-amber-300/25 transition-transform duration-300 group-hover:rotate-45" />
+                  ) : (
+                    <Moon className="w-4.5 h-4.5 text-white transition-transform duration-300 group-hover:-rotate-12" />
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => onNavigate('destinations')}
+                  className="h-10 px-3.5 rounded-2xl bg-white/20 hover:bg-white/30 text-white text-xs font-bold border border-white/25 backdrop-blur-md transition-all active:scale-95 flex items-center gap-2 cursor-pointer shadow-xs"
+                  title="Explore Destinations Menu"
+                  aria-label="Destinations Menu"
+                >
+                  <Compass className="w-4 h-4 text-[#FFB84D]" />
+                  <span>Explore</span>
+                </button>
               </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => openAuthModal('signin')}
-                className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-md text-[10px] sm:text-[11px] font-bold text-white border border-white/25 transition-all cursor-pointer active:scale-95"
-              >
-                <LogIn className="w-3 h-3 text-[#FFB84D]" />
-                <span>Sign In (Google Sync)</span>
-              </button>
             )}
           </div>
-
-          <h1 className="text-fluid-hero font-extrabold font-heading tracking-tight text-white">
-            Where will your next <span className="text-[#FFB84D]">journey</span> take you?
-          </h1>
-
-          <p className="text-fluid-subtitle text-white/90 font-normal leading-relaxed">
-            Let Byahedor help you plan the perfect escape with personalized itineraries, real budgets in ₱, and local secrets.
-          </p>
 
           {/* AI Search & Input Box */}
           <form 

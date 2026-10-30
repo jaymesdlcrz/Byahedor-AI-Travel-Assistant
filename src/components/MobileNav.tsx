@@ -107,25 +107,45 @@ export const MobileNav: React.FC<MobileNavProps> = ({
             <ByahedorLogo size="sm" showTagline={false} />
           </button>
 
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-2">
             {/* Quick Dark Mode toggle with accessible 44px min tap target */}
             <button
+              id="mobile-dark-mode-toggle"
+              type="button"
               onClick={onToggleDarkMode}
-              className="w-10 h-10 rounded-xl bg-slate-100/80 dark:bg-slate-800/80 text-slate-600 hover:text-[#087EA4] dark:text-slate-300 dark:hover:text-[#4DB8E8] flex items-center justify-center transition-all active:scale-95 shadow-2xs"
-              title={darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
-              aria-label="Toggle Dark Mode"
+              className={`w-11 h-11 rounded-2xl flex items-center justify-center transition-all duration-200 active:scale-90 cursor-pointer shadow-2xs group relative border ${
+                darkMode
+                  ? 'bg-amber-400/10 hover:bg-amber-400/20 text-amber-400 border-amber-400/30 hover:border-amber-400/50 shadow-amber-500/5'
+                  : 'bg-slate-100/90 hover:bg-slate-200/90 text-slate-700 hover:text-[#087EA4] border-slate-200/90 hover:border-[#087EA4]/40 shadow-slate-900/5'
+              }`}
+              title={darkMode ? "Switch to Light Mode (Daylight)" : "Switch to Dark Mode (Twilight)"}
+              aria-label={darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
             >
-              {darkMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-600 dark:text-slate-300" />}
+              {darkMode ? (
+                <Sun className="w-5 h-5 text-amber-400 fill-amber-400/20 transition-transform duration-300 group-hover:rotate-45" />
+              ) : (
+                <Moon className="w-5 h-5 text-slate-700 transition-transform duration-300 group-hover:-rotate-12" />
+              )}
             </button>
 
             {/* Hamburger / More Drawer Trigger */}
             <button
               id="mobile-hamburger-btn"
+              type="button"
               onClick={() => setMenuOpen(!menuOpen)}
-              className="w-11 h-11 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 flex items-center justify-center transition-all active:scale-95 shadow-2xs"
+              className={`w-11 h-11 rounded-2xl flex items-center justify-center transition-all duration-200 active:scale-90 cursor-pointer shadow-2xs group relative border ${
+                menuOpen
+                  ? 'bg-[#087EA4] text-white border-[#087EA4] shadow-md shadow-[#087EA4]/25 hover:bg-[#076c8c]'
+                  : 'bg-slate-100/90 hover:bg-slate-200/90 dark:bg-slate-800/90 dark:hover:bg-slate-700/90 text-slate-700 dark:text-slate-200 hover:text-[#087EA4] dark:hover:text-[#4DB8E8] border-slate-200/90 dark:border-slate-700/80 shadow-slate-900/5'
+              }`}
               aria-label={menuOpen ? "Close Menu" : "Open Menu"}
+              title={menuOpen ? "Close Navigation Menu" : "Open Navigation Menu"}
             >
-              {menuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
+              {menuOpen ? (
+                <X className="w-5 h-5 transition-transform duration-200 rotate-90" />
+              ) : (
+                <Menu className="w-5 h-5 transition-transform duration-200 group-hover:scale-105" />
+              )}
             </button>
           </div>
         </div>

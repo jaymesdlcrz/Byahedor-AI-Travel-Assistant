@@ -497,6 +497,8 @@ export default function App() {
               onStartPlanning={handleStartPlanning}
               onStartChat={handleStartChat}
               savedTripIds={savedTrips.map(t => t.id)}
+              darkMode={darkMode}
+              onToggleDarkMode={handleToggleDarkMode}
             />
           )}
 
