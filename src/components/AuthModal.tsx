@@ -57,10 +57,8 @@ export const AuthModal: React.FC = () => {
 
   // OTP State
   const [otpDigits, setOtpDigits] = useState<string[]>(['', '', '', '', '', '']);
-  const [activeOtpCode, setActiveOtpCode] = useState<string>('');
   const [otpResendCountdown, setOtpResendCountdown] = useState<number>(60);
   const [otpSuccessMessage, setOtpSuccessMessage] = useState<string | null>(null);
-  const [emailPreviewUrl, setEmailPreviewUrl] = useState<string | null>(null);
   const [isRealEmailSent, setIsRealEmailSent] = useState<boolean>(false);
   const otpInputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
@@ -164,13 +162,6 @@ export const AuthModal: React.FC = () => {
     }
   };
 
-  const handleFillOtp = (code: string) => {
-    if (!code || code.length !== 6) return;
-    setOtpDigits(code.split(''));
-    setValidationError(null);
-    otpInputRefs.current[5]?.focus();
-  };
-
   const handleResendOtp = async () => {
     if (otpResendCountdown > 0 || isSubmitting) return;
     setIsSubmitting(true);
@@ -178,8 +169,6 @@ export const AuthModal: React.FC = () => {
     clearAuthError();
     try {
       const res = await requestPasswordResetOtp(email.trim().toLowerCase());
-      setActiveOtpCode(res.code);
-      setEmailPreviewUrl(res.previewUrl || null);
       setIsRealEmailSent(Boolean(res.isReal));
       setOtpResendCountdown(60);
       setOtpSuccessMessage(res.message || `A new 6-digit password reset code was sent via email to ${email.trim()}`);
@@ -251,8 +240,6 @@ export const AuthModal: React.FC = () => {
       try {
         // OTP ONLY WORKS FOR FORGOT PASSWORD IN EXISTING ACCOUNTS
         const res = await requestPasswordResetOtp(cleanEmail);
-        setActiveOtpCode(res.code);
-        setEmailPreviewUrl(res.previewUrl || null);
         setIsRealEmailSent(Boolean(res.isReal));
         setOtpDigits(['', '', '', '', '', '']);
         setNewPassword('');
@@ -485,52 +472,22 @@ export const AuthModal: React.FC = () => {
 
                 {/* Mailbox shortcut actions */}
                 <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-slate-200/60 dark:border-slate-700/60 text-xs">
+                  {/* Mailbox shortcut action for Gmail */}
                   {email.toLowerCase().includes('@gmail.com') && (
-                    <a
-                      href="https://mail.google.com/"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:text-[#087EA4] dark:hover:text-[#4DB8E8] font-semibold border border-slate-200 dark:border-slate-700 transition-colors shadow-2xs text-[11px]"
-                    >
-                      <ExternalLink className="w-3 h-3 text-[#EA4335]" />
-                      <span>Open Gmail</span>
-                    </a>
-                  )}
-                  {emailPreviewUrl && (
-                    <a
-                      href={emailPreviewUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 font-semibold border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-colors shadow-2xs text-[11px]"
-                    >
-                      <ExternalLink className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
-                      <span>View Sent Email Preview</span>
-                    </a>
+                    <div className="flex items-center pt-1 border-t border-slate-200/60 dark:border-slate-700/60 text-xs">
+                      <a
+                        href="https://mail.google.com/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:text-[#087EA4] dark:hover:text-[#4DB8E8] font-bold border border-slate-200 dark:border-slate-700 transition-colors shadow-2xs text-[11px]"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5 text-[#EA4335]" />
+                        <span>Open Gmail Inbox</span>
+                      </a>
+                    </div>
                   )}
                 </div>
               </div>
-
-              {/* Fast-Testing OTP Simulation Pill Banner */}
-              {activeOtpCode && (
-                <div className="p-3 rounded-2xl bg-amber-500/10 dark:bg-amber-400/10 border border-amber-500/30 text-amber-900 dark:text-amber-200 text-xs flex items-center justify-between gap-2 shadow-2xs">
-                  <div className="flex items-center gap-2">
-                    <KeyRound className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
-                    <div>
-                      <div className="font-bold text-[11px]">Instant One-Time Code:</div>
-                      <div className="font-mono text-base font-black tracking-widest text-[#087EA4] dark:text-[#4DB8E8]">
-                        {activeOtpCode}
-                      </div>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => handleFillOtp(activeOtpCode)}
-                    className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-[#087EA4] text-white hover:bg-[#076c8c] transition-colors cursor-pointer shrink-0"
-                  >
-                    Auto-Fill
-                  </button>
-                </div>
-              )}
 
               {/* 6 Digit Input Group */}
               <div>

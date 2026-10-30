@@ -71,10 +71,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 
   // OTP State
   const [otpDigits, setOtpDigits] = useState<string[]>(['', '', '', '', '', '']);
-  const [activeOtpCode, setActiveOtpCode] = useState<string>('');
   const [otpResendCountdown, setOtpResendCountdown] = useState<number>(60);
   const [otpSuccessMessage, setOtpSuccessMessage] = useState<string | null>(null);
-  const [emailPreviewUrl, setEmailPreviewUrl] = useState<string | null>(null);
   const [isRealEmailSent, setIsRealEmailSent] = useState<boolean>(false);
   const otpInputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
@@ -156,13 +154,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     }
   };
 
-  const handleFillOtp = (code: string) => {
-    if (!code || code.length !== 6) return;
-    setOtpDigits(code.split(''));
-    setValidationError(null);
-    otpInputRefs.current[5]?.focus();
-  };
-
   const handleResendOtp = async () => {
     if (otpResendCountdown > 0 || isSubmitting) return;
     setIsSubmitting(true);
@@ -170,8 +161,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     clearAuthError();
     try {
       const res = await requestPasswordResetOtp(email.trim().toLowerCase());
-      setActiveOtpCode(res.code);
-      setEmailPreviewUrl(res.previewUrl || null);
       setIsRealEmailSent(Boolean(res.isReal));
       setOtpResendCountdown(60);
       setOtpSuccessMessage(res.message || `A new 6-digit password reset code was sent via email to ${email.trim()}`);
@@ -244,8 +233,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
       try {
         // OTP ONLY WORKS FOR FORGOT PASSWORD IN EXISTING ACCOUNTS
         const res = await requestPasswordResetOtp(cleanEmail);
-        setActiveOtpCode(res.code);
-        setEmailPreviewUrl(res.previewUrl || null);
         setIsRealEmailSent(Boolean(res.isReal));
         setOtpDigits(['', '', '', '', '', '']);
         setNewPassword('');
@@ -591,60 +578,21 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                     </div>
                   </div>
 
-                  {/* Mailbox shortcut actions */}
-                  <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-slate-200/60 dark:border-slate-700/60 text-xs">
-                    {email.toLowerCase().includes('@gmail.com') && (
+                  {/* Mailbox shortcut action for Gmail */}
+                  {email.toLowerCase().includes('@gmail.com') && (
+                    <div className="flex items-center pt-1 border-t border-slate-200/60 dark:border-slate-700/60 text-xs">
                       <a
                         href="https://mail.google.com/"
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:text-[#087EA4] dark:hover:text-[#4DB8E8] font-semibold border border-slate-200 dark:border-slate-700 transition-colors shadow-2xs text-[11px]"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:text-[#087EA4] dark:hover:text-[#4DB8E8] font-bold border border-slate-200 dark:border-slate-700 transition-colors shadow-2xs text-[11px]"
                       >
-                        <ExternalLink className="w-3 h-3 text-[#EA4335]" />
-                        <span>Open Gmail</span>
+                        <ExternalLink className="w-3.5 h-3.5 text-[#EA4335]" />
+                        <span>Open Gmail Inbox</span>
                       </a>
-                    )}
-                    {emailPreviewUrl && (
-                      <a
-                        href={emailPreviewUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 font-semibold border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-colors shadow-2xs text-[11px]"
-                      >
-                        <ExternalLink className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
-                        <span>Open Sent Email Preview</span>
-                      </a>
-                    )}
-                  </div>
-                </div>
-
-                {/* Active OTP Preview & One-Click Auto-Fill Banner */}
-                {activeOtpCode && (
-                  <div className="p-3 sm:p-3.5 rounded-2xl bg-gradient-to-r from-[#087EA4]/10 via-[#39A96B]/10 to-[#FFB84D]/10 border border-[#087EA4]/25 flex items-center justify-between gap-2 shadow-2xs">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#087EA4] to-[#39A96B] text-white flex items-center justify-center shrink-0 shadow-2xs">
-                        <KeyRound className="w-4 h-4" />
-                      </div>
-                      <div className="min-w-0">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block">
-                          Instant One-Time Code
-                        </span>
-                        <span className="font-mono text-base sm:text-lg font-black text-[#087EA4] dark:text-[#4DB8E8] tracking-widest block truncate">
-                          {activeOtpCode}
-                        </span>
-                      </div>
                     </div>
-                    <button
-                      type="button"
-                      id="otp-auto-fill-btn"
-                      onClick={() => handleFillOtp(activeOtpCode)}
-                      className="px-3 py-1.5 rounded-xl bg-[#087EA4] hover:bg-[#076c8c] text-white text-xs font-bold transition-all shadow-2xs flex items-center gap-1 active:scale-95 cursor-pointer shrink-0"
-                    >
-                      <Check className="w-3.5 h-3.5" />
-                      <span>Auto-Fill</span>
-                    </button>
-                  </div>
-                )}
+                  )}
+                </div>
 
                 {/* 6 Individual Digit Input Boxes */}
                 <div>
