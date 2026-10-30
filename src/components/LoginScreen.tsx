@@ -466,7 +466,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                   }`}
                 >
                   <Mail className="w-3.5 h-3.5 shrink-0" />
-                  <span>Sign In with Email</span>
+                  <span>Sign In</span>
                 </button>
                 <button
                   type="button"
@@ -479,7 +479,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                   }`}
                 >
                   <UserPlus className="w-3.5 h-3.5 shrink-0" />
-                  <span>Create Account (OTP)</span>
+                  <span>Create Account</span>
                 </button>
               </div>
             )}
@@ -565,7 +565,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             )}
 
             {/* ========================================================================= */}
-            {/* OTP VERIFICATION MODE (Shown for New Login Emails & OTP Sign-ins) */}
+            {/* OTP VERIFICATION MODE (Password Reset for Existing Accounts) */}
             {/* ========================================================================= */}
             {mode === 'otp' ? (
               <form onSubmit={handleVerifyOtp} className="space-y-4">
