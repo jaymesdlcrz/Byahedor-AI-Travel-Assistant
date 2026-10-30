@@ -1230,14 +1230,22 @@ async function getMailTransporter() {
   const port = parseInt(process.env.SMTP_PORT || "587", 10);
   const secure = process.env.SMTP_SECURE === "true" || port === 465;
 
-  if (host && user && pass) {
+  if (user && pass) {
+    const isGmail = (host && host.includes("gmail")) || user.toLowerCase().endsWith("@gmail.com");
+    const transportConfig: any = isGmail
+      ? {
+          service: "gmail",
+          auth: { user, pass }
+        }
+      : {
+          host: host || "smtp.gmail.com",
+          port,
+          secure,
+          auth: { user, pass }
+        };
+
     return {
-      transporter: nodemailer.createTransport({
-        host,
-        port,
-        secure,
-        auth: { user, pass },
-      }),
+      transporter: nodemailer.createTransport(transportConfig),
       isReal: true,
       sender: process.env.SMTP_FROM || `Byahedor Travel Concierge <${user}>`
     };
