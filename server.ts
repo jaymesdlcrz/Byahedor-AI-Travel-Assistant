@@ -3,6 +3,7 @@ import path from "path";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI, ThinkingLevel } from "@google/genai";
 import dotenv from "dotenv";
+import nodemailer from "nodemailer";
 
 dotenv.config();
 
@@ -1216,6 +1217,156 @@ Return ONLY a JSON array of category objects:
   } catch (error: any) {
     console.error("Checklist error:", error);
     res.status(500).json({ error: error?.message || "Failed to generate checklist" });
+  }
+});
+
+// ==========================================
+// EMAIL OTP DISPATCH ENDPOINT
+// ==========================================
+async function getMailTransporter() {
+  const host = process.env.SMTP_HOST || (process.env.GMAIL_USER ? "smtp.gmail.com" : "");
+  const user = process.env.SMTP_USER || process.env.GMAIL_USER || "";
+  const pass = process.env.SMTP_PASS || process.env.GMAIL_APP_PASSWORD || process.env.GMAIL_PASS || "";
+  const port = parseInt(process.env.SMTP_PORT || "587", 10);
+  const secure = process.env.SMTP_SECURE === "true" || port === 465;
+
+  if (host && user && pass) {
+    return {
+      transporter: nodemailer.createTransport({
+        host,
+        port,
+        secure,
+        auth: { user, pass },
+      }),
+      isReal: true,
+      sender: process.env.SMTP_FROM || `Byahedor Travel Concierge <${user}>`
+    };
+  }
+
+  // Fallback: create an Ethereal sandbox test account so real preview URL can be inspected
+  try {
+    const testAccount = await nodemailer.createTestAccount();
+    const testTransporter = nodemailer.createTransport({
+      host: testAccount.smtp.host,
+      port: testAccount.smtp.port,
+      secure: testAccount.smtp.secure,
+      auth: {
+        user: testAccount.user,
+        pass: testAccount.pass,
+      },
+    });
+    return {
+      transporter: testTransporter,
+      isReal: false,
+      sender: `"Byahedor Concierge" <noreply@byahedor.ph>`
+    };
+  } catch (e) {
+    console.warn("Falling back to jsonTransport for email:", e);
+    return {
+      transporter: nodemailer.createTransport({
+        jsonTransport: true
+      }),
+      isReal: false,
+      sender: `"Byahedor Concierge" <noreply@byahedor.ph>`
+    };
+  }
+}
+
+app.post("/api/auth/send-otp-email", async (req: Request, res: Response) => {
+  try {
+    const { email, code, name, type } = req.body;
+    if (!email || !code) {
+      return res.status(400).json({ error: "Email and OTP code are required" });
+    }
+
+    const { transporter, isReal, sender } = await getMailTransporter();
+    const recipientName = name ? String(name).trim() : "Byahedor Explorer";
+    const isPasswordReset = type === "password_reset";
+    const emailSubject = isPasswordReset 
+      ? `${code} is your Byahedor Password Reset Code`
+      : `${code} is your Byahedor verification code`;
+    const headingText = isPasswordReset
+      ? `Password Reset Request`
+      : `Mabuhay, ${recipientName}!`;
+    const bodyText = isPasswordReset
+      ? `We received a request to reset the password for your existing Byahedor account (<strong>${email}</strong>). Enter the 6-digit OTP code below to choose a new password:`
+      : `Here is your 6-digit One-Time Password (OTP) to verify your email address (<strong>${email}</strong>) and access your personalized Philippine travel blueprints.`;
+
+    const htmlContent = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${emailSubject}</title>
+</head>
+<body style="margin: 0; padding: 24px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f1f5f9; color: #1e293b;">
+  <div style="max-width: 520px; margin: 0 auto; background: #ffffff; border-radius: 20px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.06); border: 1px solid #e2e8f0;">
+    <div style="background: linear-gradient(135deg, #087EA4 0%, #0284c7 50%, #39A96B 100%); padding: 32px 24px; text-align: center; color: #ffffff;">
+      <h1 style="margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.5px;">🇵🇭 Byahedor</h1>
+      <p style="margin: 6px 0 0; font-size: 13px; opacity: 0.9; font-weight: 500;">AI Travel Concierge &amp; Philippine Explorer</p>
+    </div>
+    
+    <div style="padding: 32px 28px;">
+      <h2 style="margin: 0 0 12px; font-size: 19px; font-weight: 700; color: #0f172a;">${headingText}</h2>
+      <p style="margin: 0 0 20px; font-size: 14px; line-height: 1.6; color: #475569;">
+        ${bodyText}
+      </p>
+
+      <div style="background: #f8fafc; border: 2px dashed #087EA4; border-radius: 16px; padding: 24px; text-align: center; margin-bottom: 24px;">
+        <span style="display: block; font-size: 11px; text-transform: uppercase; font-weight: 700; color: #64748b; letter-spacing: 1.5px; margin-bottom: 8px;">Your 6-Digit Reset Code</span>
+        <div style="font-size: 34px; font-weight: 900; letter-spacing: 8px; color: #087EA4; font-family: monospace;">
+          ${code}
+        </div>
+        <span style="display: block; font-size: 12px; color: #64748b; margin-top: 8px; font-weight: 500;">Expires in 10 minutes</span>
+      </div>
+
+      <p style="margin: 0 0 16px; font-size: 12px; line-height: 1.5; color: #64748b;">
+        🔒 <strong>Security reminder:</strong> Never share this code with anyone. If you did not initiate this password reset, please ignore this email; your existing password will remain unchanged.
+      </p>
+
+      <div style="border-top: 1px solid #e2e8f0; margin-top: 28px; padding-top: 20px; text-align: center; font-size: 12px; color: #94a3b8;">
+        Tara na, Byahe tayo! • Smart AI Trip Planning for the 7,641 Islands<br>
+        &copy; ${new Date().getFullYear()} Byahedor Travel Concierge
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+`;
+
+    const info = await transporter.sendMail({
+      from: sender,
+      to: email,
+      subject: emailSubject,
+      text: isPasswordReset
+        ? `Your Byahedor password reset code is: ${code}. This code expires in 10 minutes.`
+        : `Mabuhay ${recipientName}! Your Byahedor 6-digit verification code is: ${code}. This code expires in 10 minutes.`,
+      html: htmlContent,
+    });
+
+    const previewUrl = nodemailer.getTestMessageUrl(info);
+
+    console.log(`[OTP Email] Sent to ${email} (type: ${type || 'standard'}). Code: ${code}. isReal=${isReal}. MsgId=${info.messageId}`);
+    if (previewUrl) {
+      console.log(`[OTP Preview]: ${previewUrl}`);
+    }
+
+    return res.json({
+      success: true,
+      message: isReal 
+        ? `Password reset verification code sent directly to ${email}.`
+        : `Password reset verification code sent for ${email}.`,
+      isReal,
+      previewUrl: previewUrl ? String(previewUrl) : null,
+      messageId: info.messageId || null
+    });
+  } catch (error: any) {
+    console.error("Error in /api/auth/send-otp-email:", error);
+    return res.status(500).json({ 
+      error: error?.message || "Failed to dispatch email",
+      fallbackAvailable: true 
+    });
   }
 });
 

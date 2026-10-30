@@ -13,13 +13,18 @@ import {
   doc, 
   setDoc, 
   deleteDoc, 
-  serverTimestamp 
+  serverTimestamp,
+  collection,
+  query,
+  where,
+  getDocs,
+  limit
 } from 'firebase/firestore';
 import { auth, db, googleProvider, testFirestoreConnection } from './config';
 import { handleFirestoreError, OperationType } from './errors';
 import { TripPlan, UserPreferences, AuthUser } from '../types';
 
-export type AuthModalMode = 'signin' | 'signup' | 'forgot';
+export type AuthModalMode = 'signin' | 'signup' | 'forgot' | 'otp';
 export type AppUser = User | AuthUser;
 
 interface StoredAccount {
@@ -29,6 +34,31 @@ interface StoredAccount {
   passwordHash: string;
   createdAt: string;
   photoURL?: string;
+}
+
+interface StoredOtp {
+  email: string;
+  code: string;
+  createdAt: number;
+  expiresAt: number;
+}
+
+function getStoredOtps(): Record<string, StoredOtp> {
+  try {
+    const raw = localStorage.getItem('byahedor_otps');
+    if (raw) return JSON.parse(raw);
+  } catch {
+    // fallback
+  }
+  return {};
+}
+
+function saveStoredOtps(otps: Record<string, StoredOtp>) {
+  try {
+    localStorage.setItem('byahedor_otps', JSON.stringify(otps));
+  } catch {
+    // fallback
+  }
 }
 
 const DEFAULT_DEMO_ACCOUNT: StoredAccount = {
@@ -86,6 +116,27 @@ interface AuthContextType {
   saveTripRemote: (trip: TripPlan) => Promise<void>;
   deleteTripRemote: (tripId: string) => Promise<void>;
   savePreferencesRemote: (prefs: UserPreferences, darkMode: boolean) => Promise<void>;
+  // OTP Verification helpers (Specifically for Forgot Password on existing accounts)
+  checkAccountExists: (email: string) => Promise<{ exists: boolean; displayName?: string }>;
+  requestPasswordResetOtp: (email: string) => Promise<{
+    code: string;
+    message: string;
+    emailSent: boolean;
+    previewUrl?: string | null;
+    isReal?: boolean;
+  }>;
+  resetPasswordWithOtp: (email: string, code: string, newPass: string) => Promise<void>;
+  sendEmailOtp: (email: string, name?: string, type?: 'password_reset' | 'verification') => Promise<{ 
+    code: string; 
+    message: string; 
+    emailSent?: boolean;
+    previewUrl?: string | null;
+    isReal?: boolean;
+  }>;
+  verifyEmailOtp: (email: string, code: string) => boolean;
+  getPendingOtp: (email: string) => string | null;
+  signInWithOtp: (email: string, code: string, displayName?: string) => Promise<void>;
+  signUpWithOtp: (email: string, pass: string, displayName: string, code: string) => Promise<void>;
   // Global modal state
   isAuthModalOpen: boolean;
   authModalMode: AuthModalMode;
@@ -498,6 +549,294 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const checkAccountExists = async (email: string): Promise<{ exists: boolean; displayName?: string }> => {
+    const cleanEmail = email.trim().toLowerCase();
+    if (!cleanEmail) return { exists: false };
+
+    // 1. Check local registered accounts
+    const accounts = getStoredAccounts();
+    const localAcc = accounts.find(a => a.email.toLowerCase() === cleanEmail);
+    if (localAcc) {
+      return { exists: true, displayName: localAcc.displayName };
+    }
+
+    // 2. Check Firestore users collection
+    try {
+      const q = query(collection(db, 'users'), where('email', '==', cleanEmail), limit(1));
+      const snap = await getDocs(q);
+      if (!snap.empty) {
+        const data = snap.docs[0].data();
+        return { exists: true, displayName: data.displayName || cleanEmail.split('@')[0] };
+      }
+    } catch (err) {
+      console.warn("Could not query firestore for existing user:", err);
+    }
+
+    return { exists: false };
+  };
+
+  const sendEmailOtp = async (
+    email: string, 
+    name?: string,
+    type: 'password_reset' | 'verification' = 'password_reset'
+  ): Promise<{ 
+    code: string; 
+    message: string; 
+    emailSent: boolean;
+    previewUrl?: string | null;
+    isReal?: boolean;
+  }> => {
+    setAuthError(null);
+    const cleanEmail = email.trim().toLowerCase();
+    if (!cleanEmail || !cleanEmail.includes('@') || !cleanEmail.includes('.')) {
+      const err = new Error('auth/invalid-email');
+      (err as any).code = 'auth/invalid-email';
+      setAuthError('Please enter a valid email address.');
+      throw err;
+    }
+
+    // Generate a secure 6-digit numeric OTP code
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const now = Date.now();
+    const expiresAt = now + 10 * 60 * 1000; // 10 minutes expiry
+
+    const otps = getStoredOtps();
+    otps[cleanEmail] = {
+      email: cleanEmail,
+      code,
+      createdAt: now,
+      expiresAt
+    };
+    saveStoredOtps(otps);
+
+    console.log(`[Byahedor Security OTP] Password reset OTP for ${cleanEmail}: ${code}`);
+
+    let previewUrl: string | null = null;
+    let isReal = false;
+    let dispatchMsg = `A 6-digit password reset code has been dispatched to ${cleanEmail}.`;
+
+    try {
+      const resp = await fetch('/api/auth/send-otp-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          email: cleanEmail, 
+          code, 
+          name: name || cleanEmail.split('@')[0],
+          type
+        })
+      });
+
+      if (resp.ok) {
+        const data = await resp.json();
+        if (data.previewUrl) previewUrl = data.previewUrl;
+        isReal = Boolean(data.isReal);
+        if (data.message) dispatchMsg = data.message;
+      }
+    } catch (fetchErr) {
+      console.warn("Could not dispatch OTP via /api/auth/send-otp-email:", fetchErr);
+    }
+
+    return {
+      code,
+      message: dispatchMsg,
+      emailSent: true,
+      previewUrl,
+      isReal
+    };
+  };
+
+  // OTP MUST ONLY WORK FOR FORGOT PASSWORD IN EXISTING ACCOUNTS
+  const requestPasswordResetOtp = async (email: string): Promise<{
+    code: string;
+    message: string;
+    emailSent: boolean;
+    previewUrl?: string | null;
+    isReal?: boolean;
+  }> => {
+    setAuthError(null);
+    const cleanEmail = email.trim().toLowerCase();
+    if (!cleanEmail || !cleanEmail.includes('@') || !cleanEmail.includes('.')) {
+      const err = new Error('auth/invalid-email');
+      (err as any).code = 'auth/invalid-email';
+      setAuthError('Please enter a valid email address.');
+      throw err;
+    }
+
+    // Verify account exists
+    const accountCheck = await checkAccountExists(cleanEmail);
+    if (!accountCheck.exists) {
+      const notFoundErr = new Error(`No account found with "${cleanEmail}". OTP password reset only works for existing accounts. Please create a new account or check your email.`);
+      (notFoundErr as any).code = 'auth/user-not-found';
+      setAuthError(notFoundErr.message);
+      throw notFoundErr;
+    }
+
+    // Account exists! Dispatch OTP specifically for password reset
+    return await sendEmailOtp(cleanEmail, accountCheck.displayName, 'password_reset');
+  };
+
+  const resetPasswordWithOtp = async (email: string, code: string, newPass: string) => {
+    setAuthError(null);
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanCode = code.trim();
+    const cleanPass = newPass.trim();
+
+    if (!cleanPass || cleanPass.length < 6) {
+      const err = new Error('New password must be at least 6 characters.');
+      setAuthError(err.message);
+      throw err;
+    }
+
+    if (!verifyEmailOtp(cleanEmail, cleanCode)) {
+      const err = new Error('Invalid or expired 6-digit OTP code. Please check the code or request a new one.');
+      setAuthError(err.message);
+      throw err;
+    }
+
+    // Update password in local accounts
+    const accounts = getStoredAccounts();
+    const accIndex = accounts.findIndex(a => a.email.toLowerCase() === cleanEmail);
+    if (accIndex !== -1) {
+      accounts[accIndex].passwordHash = hashPassword(cleanPass);
+      saveStoredAccounts(accounts);
+    } else {
+      accounts.push({
+        uid: 'byahe_' + Math.random().toString(36).substring(2, 9) + Date.now().toString(36),
+        email: cleanEmail,
+        displayName: cleanEmail.split('@')[0],
+        passwordHash: hashPassword(cleanPass),
+        createdAt: new Date().toISOString()
+      });
+      saveStoredAccounts(accounts);
+    }
+
+    // Also trigger Firebase sendPasswordResetEmail in background if supported
+    try {
+      await sendPasswordResetEmail(auth, cleanEmail);
+    } catch {
+      // non-blocking
+    }
+
+    // Clear used OTP
+    const otps = getStoredOtps();
+    delete otps[cleanEmail];
+    saveStoredOtps(otps);
+  };
+
+  const verifyEmailOtp = (email: string, code: string): boolean => {
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanCode = code.trim();
+    if (!cleanEmail || !cleanCode) return false;
+
+    const otps = getStoredOtps();
+    const record = otps[cleanEmail];
+    if (!record) return false;
+
+    if (Date.now() > record.expiresAt) {
+      delete otps[cleanEmail];
+      saveStoredOtps(otps);
+      return false;
+    }
+
+    return record.code === cleanCode;
+  };
+
+  const getPendingOtp = (email: string): string | null => {
+    const cleanEmail = email.trim().toLowerCase();
+    const otps = getStoredOtps();
+    const record = otps[cleanEmail];
+    if (record && Date.now() <= record.expiresAt) {
+      return record.code;
+    }
+    return null;
+  };
+
+  const signInWithOtp = async (email: string, code: string, displayName?: string) => {
+    setAuthError(null);
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanCode = code.trim();
+
+    if (!verifyEmailOtp(cleanEmail, cleanCode)) {
+      const err = new Error('Invalid or expired 6-digit verification code. Please check the code or request a new one.');
+      setAuthError(err.message);
+      throw err;
+    }
+
+    // Clear used OTP
+    const otps = getStoredOtps();
+    delete otps[cleanEmail];
+    saveStoredOtps(otps);
+
+    // Check if account already exists
+    const accounts = getStoredAccounts();
+    let account = accounts.find(a => a.email.toLowerCase() === cleanEmail);
+
+    if (!account) {
+      const cleanName = (displayName || cleanEmail.split('@')[0]).trim();
+      const newUid = 'byahe_' + Math.random().toString(36).substring(2, 9) + Date.now().toString(36);
+      account = {
+        uid: newUid,
+        email: cleanEmail,
+        displayName: cleanName,
+        passwordHash: hashPassword('otp_login_verified'),
+        createdAt: new Date().toISOString()
+      };
+      accounts.push(account);
+      saveStoredAccounts(accounts);
+    }
+
+    const appUser: AuthUser = {
+      uid: account.uid,
+      email: account.email,
+      displayName: account.displayName,
+      photoURL: account.photoURL || null,
+      emailVerified: true,
+      isAnonymous: false,
+      providerId: 'password'
+    };
+
+    localStorage.setItem('byahedor_active_user', JSON.stringify(appUser));
+    localStorage.removeItem('byahedor_guest_session');
+    setCurrentUser(appUser);
+    setIsAuthModalOpen(false);
+
+    // Sync user record to Firestore
+    try {
+      const userDocRef = doc(db, 'users', appUser.uid);
+      await setDoc(userDocRef, {
+        userId: appUser.uid,
+        email: appUser.email,
+        displayName: appUser.displayName,
+        photoURL: '',
+        createdAt: serverTimestamp(),
+        lastLoginAt: serverTimestamp()
+      }, { merge: true }).catch(() => {});
+    } catch {
+      // non-blocking
+    }
+  };
+
+  const signUpWithOtp = async (email: string, pass: string, displayName: string, code: string) => {
+    setAuthError(null);
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanCode = code.trim();
+
+    if (!verifyEmailOtp(cleanEmail, cleanCode)) {
+      const err = new Error('Invalid or expired 6-digit verification code. Please verify the code or request a resend.');
+      setAuthError(err.message);
+      throw err;
+    }
+
+    // Clear used OTP
+    const otps = getStoredOtps();
+    delete otps[cleanEmail];
+    saveStoredOtps(otps);
+
+    // Proceed to create the account
+    await signUpWithEmail(cleanEmail, pass, displayName);
+  };
+
   const resetPassword = async (email: string) => {
     setAuthError(null);
     const cleanEmail = email.trim().toLowerCase();
@@ -616,6 +955,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       saveTripRemote,
       deleteTripRemote,
       savePreferencesRemote,
+      checkAccountExists,
+      requestPasswordResetOtp,
+      resetPasswordWithOtp,
+      sendEmailOtp,
+      verifyEmailOtp,
+      getPendingOtp,
+      signInWithOtp,
+      signUpWithOtp,
       isAuthModalOpen,
       authModalMode,
       openAuthModal,
