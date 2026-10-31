@@ -6,6 +6,8 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   sendPasswordResetEmail,
+  verifyPasswordResetCode,
+  confirmPasswordReset,
   updateProfile,
   signOut 
 } from 'firebase/auth';
@@ -24,7 +26,7 @@ import { auth, db, googleProvider, testFirestoreConnection } from './config';
 import { handleFirestoreError, OperationType } from './errors';
 import { TripPlan, UserPreferences, AuthUser } from '../types';
 
-export type AuthModalMode = 'signin' | 'signup' | 'forgot' | 'otp';
+export type AuthModalMode = 'signin' | 'signup' | 'forgot' | 'reset_sent' | 'reset_password' | 'otp';
 export type AppUser = User | AuthUser;
 
 interface StoredAccount {
@@ -116,7 +118,10 @@ interface AuthContextType {
   saveTripRemote: (trip: TripPlan) => Promise<void>;
   deleteTripRemote: (tripId: string) => Promise<void>;
   savePreferencesRemote: (prefs: UserPreferences, darkMode: boolean) => Promise<void>;
-  // OTP Verification helpers (Specifically for Forgot Password on existing accounts)
+  // Email password reset link helpers (works for all email providers with no OTP required)
+  sendPasswordResetLink: (email: string) => Promise<{ success: boolean; message: string }>;
+  verifyResetCode: (code: string) => Promise<string>;
+  confirmResetPassword: (code: string, newPass: string) => Promise<void>;
   checkAccountExists: (email: string) => Promise<{ exists: boolean; displayName?: string }>;
   requestPasswordResetOtp: (email: string) => Promise<{
     code: string;
@@ -646,14 +651,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   };
 
-  // Password reset works for all email providers via Firebase Auth with zero .env configuration required
-  const requestPasswordResetOtp = async (email: string): Promise<{
-    code: string;
-    message: string;
-    emailSent: boolean;
-    previewUrl?: string | null;
-    isReal?: boolean;
-  }> => {
+  // 1. Send Password Reset Link directly via Google Firebase Auth (works for all email providers with NO OTP)
+  const sendPasswordResetLink = async (email: string): Promise<{ success: boolean; message: string }> => {
     setAuthError(null);
     const cleanEmail = email.trim().toLowerCase();
     if (!cleanEmail || !cleanEmail.includes('@') || !cleanEmail.includes('.')) {
@@ -666,64 +665,105 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const accounts = getStoredAccounts();
     const hasLocalAccount = accounts.some(a => a.email.toLowerCase() === cleanEmail);
 
-    // 1. Send real password reset email directly via Google Firebase Auth (works for all emails, 0 config)
-    let fbEmailSent = false;
+    const appOrigin = typeof window !== 'undefined' && window.location.origin 
+      ? window.location.origin 
+      : 'https://dark-physics-m98sv.firebaseapp.com';
+
+    const actionCodeSettings = {
+      url: `${appOrigin}/?mode=resetPassword`,
+      handleCodeInApp: false
+    };
+
     try {
-      await sendPasswordResetEmail(auth, cleanEmail);
-      fbEmailSent = true;
+      await sendPasswordResetEmail(auth, cleanEmail, actionCodeSettings);
       console.log(`[Firebase Auth] Real password reset email sent to ${cleanEmail}`);
     } catch (fbEmailErr: any) {
       const fbCode = String(fbEmailErr?.code || '').toLowerCase();
-      console.warn("[Firebase Auth] sendPasswordResetEmail result:", fbCode, fbEmailErr?.message);
-
-      // If user does not exist in Firebase Auth and has no local account
-      if (fbCode.includes('user-not-found') && !hasLocalAccount) {
+      // If actionCodeSettings caused an unauthorized continue URL error, fallback without actionCodeSettings
+      if (fbCode.includes('unauthorized-continue-uri') || fbCode.includes('invalid-continue-uri')) {
+        await sendPasswordResetEmail(auth, cleanEmail);
+      } else if (fbCode.includes('user-not-found') && !hasLocalAccount) {
         const notFoundErr = new Error(`No account found with "${cleanEmail}". Password reset only works for existing accounts. Please create a new account or check your email.`);
         (notFoundErr as any).code = 'auth/user-not-found';
         setAuthError(notFoundErr.message);
         throw notFoundErr;
+      } else if (!fbCode.includes('user-not-found')) {
+        const friendly = formatAuthError(fbEmailErr);
+        setAuthError(friendly);
+        throw fbEmailErr;
       }
     }
 
-    // 2. Generate 6-digit OTP code in local store as fallback in case user chooses code verification
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
-    const now = Date.now();
-    const expiresAt = now + 15 * 60 * 1000; // 15 mins expiry
-
-    const otps = getStoredOtps();
-    otps[cleanEmail] = {
-      email: cleanEmail,
-      code,
-      createdAt: now,
-      expiresAt
-    };
-    saveStoredOtps(otps);
-    console.log(`[Byahedor Security OTP] Password reset OTP for ${cleanEmail}: ${code}`);
-
-    // Try optional background dispatch via /api/auth/send-otp-email (non-blocking)
-    let previewUrl: string | null = null;
-    let isReal = fbEmailSent;
-    fetch('/api/auth/send-otp-email', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        email: cleanEmail, 
-        code, 
-        name: cleanEmail.split('@')[0],
-        type: 'password_reset'
-      })
-    }).then(async res => {
-      if (res.ok) {
-        const data = await res.json();
-        if (data.previewUrl) previewUrl = data.previewUrl;
-      }
-    }).catch(() => {});
-
     return {
-      code,
-      message: `Password reset email sent to ${cleanEmail}. Check your inbox, spam, or promotions folder.`,
+      success: true,
+      message: `A password reset link has been sent to ${cleanEmail}. Check your inbox, spam, or promotions folder.`
+    };
+  };
+
+  // 2. Verify an oobCode from an email action link
+  const verifyResetCode = async (code: string): Promise<string> => {
+    setAuthError(null);
+    try {
+      const email = await verifyPasswordResetCode(auth, code);
+      return email;
+    } catch (err: any) {
+      const msg = err?.code === 'auth/expired-action-code'
+        ? 'The password reset link has expired. Please request a new one.'
+        : err?.code === 'auth/invalid-action-code'
+        ? 'The password reset link is invalid or has already been used.'
+        : 'Could not verify the password reset link.';
+      setAuthError(msg);
+      throw new Error(msg);
+    }
+  };
+
+  // 3. Confirm and save the new password using the oobCode
+  const confirmResetPassword = async (code: string, newPass: string): Promise<void> => {
+    setAuthError(null);
+    const cleanPass = newPass.trim();
+    if (cleanPass.length < 6) {
+      const err = new Error('New password must be at least 6 characters.');
+      setAuthError(err.message);
+      throw err;
+    }
+
+    try {
+      const email = await verifyPasswordResetCode(auth, code);
+      await confirmPasswordReset(auth, code, cleanPass);
+
+      // Also update local cached account store if this user was recorded
+      const accounts = getStoredAccounts();
+      const accIdx = accounts.findIndex(a => a.email.toLowerCase() === email.toLowerCase());
+      if (accIdx !== -1) {
+        accounts[accIdx].passwordHash = hashPassword(cleanPass);
+        saveStoredAccounts(accounts);
+      }
+    } catch (err: any) {
+      const msg = err?.code === 'auth/weak-password'
+        ? 'Password must be at least 6 characters.'
+        : err?.code === 'auth/expired-action-code'
+        ? 'The reset link has expired. Please request a new link.'
+        : err?.code === 'auth/invalid-action-code'
+        ? 'The reset link is invalid or has already been used.'
+        : err?.message || 'Failed to update password.';
+      setAuthError(msg);
+      throw new Error(msg);
+    }
+  };
+
+  // Backward compatibility wrapper
+  const requestPasswordResetOtp = async (email: string): Promise<{
+    code: string;
+    message: string;
+    emailSent: boolean;
+    previewUrl?: string | null;
+    isReal?: boolean;
+  }> => {
+    const res = await sendPasswordResetLink(email);
+    return {
+      code: '000000',
+      message: res.message,
       emailSent: true,
-      previewUrl,
       isReal: true
     };
   };
@@ -1007,6 +1047,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       saveTripRemote,
       deleteTripRemote,
       savePreferencesRemote,
+      sendPasswordResetLink,
+      verifyResetCode,
+      confirmResetPassword,
       checkAccountExists,
       requestPasswordResetOtp,
       resetPasswordWithOtp,

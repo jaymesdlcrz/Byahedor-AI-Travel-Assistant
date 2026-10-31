@@ -33,8 +33,7 @@ interface LoginScreenProps {
   onToggleDarkMode: () => void;
 }
 
-type AuthMode = 'signin' | 'signup' | 'forgot' | 'otp';
-type SignInMethod = 'password' | 'otp';
+type AuthMode = 'signin' | 'signup' | 'forgot' | 'reset_sent' | 'reset_password';
 
 export const LoginScreen: React.FC<LoginScreenProps> = ({
   onContinueAsGuest,
@@ -45,9 +44,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     signInWithGoogle, 
     signInWithEmail, 
     signUpWithEmail, 
-    resetPassword,
-    requestPasswordResetOtp,
-    resetPasswordWithOtp,
+    sendPasswordResetLink,
+    verifyResetCode,
+    confirmResetPassword,
     authError, 
     clearAuthError 
   } = useAuth();
@@ -65,40 +64,54 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   const [agreeTerms, setAgreeTerms] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGoogleSubmitting, setIsGoogleSubmitting] = useState(false);
-  const [resetSent, setResetSent] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [validationError, setValidationError] = useState<string | null>(null);
 
-  // OTP State
-  const [otpDigits, setOtpDigits] = useState<string[]>(['', '', '', '', '', '']);
-  const [otpResendCountdown, setOtpResendCountdown] = useState<number>(60);
-  const [otpSuccessMessage, setOtpSuccessMessage] = useState<string | null>(null);
-  const [isRealEmailSent, setIsRealEmailSent] = useState<boolean>(false);
-  const [showManualOtpEntry, setShowManualOtpEntry] = useState<boolean>(false);
-  const otpInputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  // Email Reset Link State
+  const [resetActionCode, setResetActionCode] = useState<string | null>(null);
+  const [resetEmail, setResetEmail] = useState<string>('');
+  const [resendCountdown, setResendCountdown] = useState<number>(0);
+  const [resetSuccessMessage, setResetSuccessMessage] = useState<string | null>(null);
 
-  // OTP Resend Countdown Timer
+  // Check URL on mount for email password reset link (?mode=resetPassword&oobCode=...)
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const oobCode = params.get('oobCode');
+      const modeParam = params.get('mode');
+      if (oobCode && (modeParam === 'resetPassword' || !modeParam)) {
+        setResetActionCode(oobCode);
+        setIsSubmitting(true);
+        verifyResetCode(oobCode)
+          .then(verifiedEmail => {
+            setResetEmail(verifiedEmail);
+            setMode('reset_password');
+          })
+          .catch(err => {
+            setValidationError(err?.message || 'Invalid or expired password reset link. Please request a new link.');
+            setMode('forgot');
+          })
+          .finally(() => {
+            setIsSubmitting(false);
+          });
+      }
+    } catch {
+      // fallback
+    }
+  }, []);
+
+  // Resend Countdown Timer
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
-    if (mode === 'otp' && otpResendCountdown > 0) {
+    if (mode === 'reset_sent' && resendCountdown > 0) {
       interval = setInterval(() => {
-        setOtpResendCountdown(prev => Math.max(0, prev - 1));
+        setResendCountdown(prev => Math.max(0, prev - 1));
       }, 1000);
     }
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [mode, otpResendCountdown]);
-
-  // Auto-focus first OTP input when entering OTP mode
-  useEffect(() => {
-    if (mode === 'otp') {
-      const timer = setTimeout(() => {
-        otpInputRefs.current[0]?.focus();
-      }, 150);
-      return () => clearTimeout(timer);
-    }
-  }, [mode]);
+  }, [mode, resendCountdown]);
 
   const handleGoogleSignIn = async () => {
     clearAuthError();
@@ -113,99 +126,67 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     }
   };
 
-  const handleOtpDigitChange = (index: number, val: string) => {
-    const clean = val.replace(/\D/g, '');
-    const next = [...otpDigits];
-
-    if (!clean) {
-      next[index] = '';
-      setOtpDigits(next);
+  const handleSendResetLink = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    clearAuthError();
+    setValidationError(null);
+    const cleanEmail = email.trim().toLowerCase();
+    if (!cleanEmail || !cleanEmail.includes('@') || !cleanEmail.includes('.')) {
+      setValidationError('Please enter a valid email address (e.g. maria@example.com).');
       return;
     }
 
-    next[index] = clean.slice(-1);
-    setOtpDigits(next);
-    if (validationError) setValidationError(null);
-
-    // Auto advance to next box
-    if (index < 5 && clean) {
-      otpInputRefs.current[index + 1]?.focus();
-    }
-  };
-
-  const handleOtpKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Backspace' && !otpDigits[index] && index > 0) {
-      otpInputRefs.current[index - 1]?.focus();
-    }
-  };
-
-  const handleOtpPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
-    e.preventDefault();
-    const paste = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
-    if (!paste) return;
-    const next = [...otpDigits];
-    for (let i = 0; i < 6; i++) {
-      next[i] = paste[i] || '';
-    }
-    setOtpDigits(next);
-    if (paste.length === 6) {
-      otpInputRefs.current[5]?.focus();
-    } else {
-      otpInputRefs.current[paste.length]?.focus();
-    }
-  };
-
-  const handleResendOtp = async () => {
-    if (otpResendCountdown > 0 || isSubmitting) return;
     setIsSubmitting(true);
-    setValidationError(null);
-    clearAuthError();
     try {
-      const res = await requestPasswordResetOtp(email.trim().toLowerCase());
-      setIsRealEmailSent(Boolean(res.isReal));
-      setOtpResendCountdown(60);
-      setOtpSuccessMessage(res.message || `A new 6-digit password reset code was sent via email to ${email.trim()}`);
-      setTimeout(() => setOtpSuccessMessage(null), 5000);
+      const res = await sendPasswordResetLink(cleanEmail);
+      setResetSuccessMessage(res.message);
+      setResendCountdown(60);
+      setMode('reset_sent');
     } catch (err: any) {
-      setValidationError(err?.message || 'Failed to resend password reset code.');
+      setValidationError(err?.message || 'Failed to send password reset email.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleVerifyOtp = async (e: React.FormEvent) => {
+  const handleResendResetLink = async () => {
+    if (resendCountdown > 0 || isSubmitting) return;
+    await handleSendResetLink();
+  };
+
+  const handleSaveNewPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     clearAuthError();
     setValidationError(null);
-    const code = otpDigits.join('');
-
-    if (code.length !== 6) {
-      setValidationError('Please enter the full 6-digit OTP code.');
-      return;
-    }
 
     if (!newPassword || newPassword.length < 6) {
       setValidationError('New password must be at least 6 characters.');
       return;
     }
-
     if (newPassword !== confirmNewPassword) {
       setValidationError('Passwords do not match. Please verify your new password.');
+      return;
+    }
+    if (!resetActionCode) {
+      setValidationError('Missing reset code. Please click the link in your email again.');
       return;
     }
 
     setIsSubmitting(true);
     try {
-      await resetPasswordWithOtp(email.trim().toLowerCase(), code, newPassword);
-      setOtpSuccessMessage('Password successfully updated! You can now sign in with your new password.');
+      await confirmResetPassword(resetActionCode, newPassword);
+      if (typeof window !== 'undefined') {
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+      setResetSuccessMessage('Password successfully updated! You can now sign in with your new password.');
       setPassword('');
-      setConfirmPassword('');
       setNewPassword('');
       setConfirmNewPassword('');
+      if (resetEmail) setEmail(resetEmail);
       setMode('signin');
-      setTimeout(() => setOtpSuccessMessage(null), 6000);
+      setTimeout(() => setResetSuccessMessage(null), 7000);
     } catch (err: any) {
-      setValidationError(err?.message || 'Invalid or expired OTP code.');
+      setValidationError(err?.message || 'Failed to update password. The reset link may have expired.');
     } finally {
       setIsSubmitting(false);
     }
@@ -215,37 +196,12 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     e.preventDefault();
     clearAuthError();
     setValidationError(null);
-    setResetSent(false);
 
     const cleanEmail = email.trim();
     const cleanPass = password.trim();
 
     if (mode === 'forgot') {
-      if (!cleanEmail) {
-        setValidationError('Please enter your registered email address.');
-        return;
-      }
-      if (!cleanEmail.includes('@') || !cleanEmail.includes('.')) {
-        setValidationError('Please enter a valid email address (e.g. maria@example.com).');
-        return;
-      }
-
-      setIsSubmitting(true);
-      try {
-        // OTP ONLY WORKS FOR FORGOT PASSWORD IN EXISTING ACCOUNTS
-        const res = await requestPasswordResetOtp(cleanEmail);
-        setIsRealEmailSent(Boolean(res.isReal));
-        setOtpDigits(['', '', '', '', '', '']);
-        setNewPassword('');
-        setConfirmNewPassword('');
-        setOtpResendCountdown(60);
-        setMode('otp');
-      } catch (err: any) {
-        // Error from checkAccountExists or sending
-        setValidationError(err?.message || `No existing account found with "${cleanEmail}". OTP code is only available for existing accounts.`);
-      } finally {
-        setIsSubmitting(false);
-      }
+      await handleSendResetLink();
       return;
     }
 
@@ -314,9 +270,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     setMode(newMode);
     clearAuthError();
     setValidationError(null);
-    setResetSent(false);
-    setOtpSuccessMessage(null);
-    setShowManualOtpEntry(false);
+    setResetSuccessMessage(null);
   };
 
   return (
@@ -442,7 +396,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
           <div className="bg-white/95 dark:bg-[#0f233a]/95 rounded-3xl p-5 sm:p-7 border border-[#E4E9F0] dark:border-slate-800 shadow-xl backdrop-blur-md relative overflow-hidden">
             
             {/* Mode Switch Tabs (Sign In with Email / Create New Account) */}
-            {mode !== 'forgot' && mode !== 'otp' && (
+            {(mode === 'signin' || mode === 'signup') && (
               <div className="grid grid-cols-2 bg-slate-100 dark:bg-slate-800/80 p-1 rounded-2xl mb-5 text-xs font-bold gap-1">
                 <button
                   type="button"
@@ -473,15 +427,15 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
               </div>
             )}
 
-            {/* Back Button for OTP or Forgot Mode */}
-            {(mode === 'otp' || mode === 'forgot') && (
+            {/* Back Button for Forgot or Reset Modes */}
+            {(mode === 'forgot' || mode === 'reset_sent' || mode === 'reset_password') && (
               <button
                 type="button"
-                onClick={() => switchMode(mode === 'otp' ? 'forgot' : 'signin')}
+                onClick={() => switchMode('signin')}
                 className="inline-flex items-center gap-1 text-xs font-semibold text-[#087EA4] dark:text-[#4DB8E8] hover:underline mb-3 cursor-pointer"
               >
                 <ArrowLeft className="w-3.5 h-3.5" />
-                <span>Back to {mode === 'otp' ? 'Forgot Password' : 'Sign In'}</span>
+                <span>Back to Sign In</span>
               </button>
             )}
 
@@ -490,18 +444,20 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
               <h2 className="text-lg sm:text-xl font-extrabold text-[#102A43] dark:text-white font-heading">
                 {mode === 'signin' && 'Sign In to Byahedor'}
                 {mode === 'signup' && 'Create Your Byahedor Account'}
-                {mode === 'otp' && 'Password Reset Email Sent'}
-                {mode === 'forgot' && 'Reset Your Password (Existing Accounts)'}
+                {mode === 'forgot' && 'Reset Your Password'}
+                {mode === 'reset_sent' && 'Password Reset Link Sent'}
+                {mode === 'reset_password' && 'Create New Password'}
               </h2>
               <p className="text-xs text-[#627D98] dark:text-slate-400 mt-1">
                 {mode === 'signin' && 'Enter your registered email and password to access your saved trips and custom budgets.'}
                 {mode === 'signup' && 'Create your free explorer profile to sync Philippine itineraries across all your devices.'}
-                {mode === 'otp' && (
+                {mode === 'forgot' && 'Enter your registered email address. We will send an official password reset link directly to your inbox.'}
+                {mode === 'reset_sent' && (
                   <span>
-                    We sent a secure password reset link to <strong className="font-semibold text-[#087EA4] dark:text-[#4DB8E8]">{email}</strong>. Check your inbox to set your new password.
+                    We sent a secure password reset link to <strong className="font-semibold text-[#087EA4] dark:text-[#4DB8E8]">{email}</strong>.
                   </span>
                 )}
-                {mode === 'forgot' && 'Enter your registered email address. We will send an official password reset link directly to your inbox.'}
+                {mode === 'reset_password' && `Enter your new password for ${resetEmail || 'your account'}.`}
               </p>
             </div>
 
@@ -535,31 +491,19 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
               </div>
             )}
 
-            {/* OTP Success / Resent Toast Message */}
-            {otpSuccessMessage && (
+            {/* Reset Success Message Toast */}
+            {resetSuccessMessage && (
               <div className="mb-4 p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/50 flex items-start gap-2.5 text-xs text-emerald-700 dark:text-emerald-300">
                 <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5 text-emerald-500" />
-                <div className="leading-relaxed">{otpSuccessMessage}</div>
-              </div>
-            )}
-
-            {/* Password Reset Sent Success Alert */}
-            {resetSent && (
-              <div className="mb-4 p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/50 flex items-start gap-2.5 text-xs text-emerald-700 dark:text-emerald-300">
-                <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5 text-emerald-500" />
-                <div className="leading-relaxed">
-                  Reset link sent to <strong className="font-semibold">{email}</strong>. Please check your inbox or spam folder.
-                </div>
+                <div className="leading-relaxed">{resetSuccessMessage}</div>
               </div>
             )}
 
             {/* ========================================================================= */}
-            {/* OTP VERIFICATION MODE (Password Reset for Existing Accounts) */}
+            {/* RESET EMAIL SENT CONFIRMATION VIEW */}
             {/* ========================================================================= */}
-            {mode === 'otp' ? (
+            {mode === 'reset_sent' && (
               <div className="space-y-4">
-                
-                {/* Email Delivery Confirmation Card */}
                 <div className="p-4 rounded-2xl bg-gradient-to-br from-sky-50 to-emerald-50/50 dark:from-[#132c4a] dark:to-[#0d3434]/50 border border-[#087EA4]/30 shadow-xs flex flex-col gap-3">
                   <div className="flex items-start gap-3">
                     <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#087EA4] to-[#0284c7] text-white flex items-center justify-center shrink-0 shadow-sm">
@@ -568,14 +512,14 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 mb-1">
                         <span className="text-sm font-bold text-slate-900 dark:text-white">
-                          Password Reset Email Sent
+                          Check Your Inbox
                         </span>
                         <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-300">
-                          {isRealEmailSent ? 'Delivered' : 'Dispatched'}
+                          Link Sent
                         </span>
                       </div>
                       <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-                        We sent a secure password reset email to <strong className="text-[#087EA4] dark:text-[#4DB8E8]">{email}</strong>. Works automatically for all email providers (Gmail, Yahoo, Outlook, etc.) without any setup.
+                        We sent a secure password reset link to <strong className="text-[#087EA4] dark:text-[#4DB8E8]">{email}</strong>. Works for all email services (Gmail, Yahoo, Outlook, etc.).
                       </p>
                     </div>
                   </div>
@@ -584,18 +528,17 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                   <div className="p-3 rounded-xl bg-white/80 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80 text-xs space-y-2">
                     <div className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
                       <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                      <span>How to reset your password:</span>
+                      <span>Next steps to reset your password:</span>
                     </div>
                     <ol className="list-decimal list-inside space-y-1 text-slate-600 dark:text-slate-300 text-[11px] leading-relaxed">
-                      <li>Open your email inbox (also check <strong>Spam</strong> or <strong>Promotions</strong>).</li>
+                      <li>Open your email inbox (also check <strong>Spam</strong> or <strong>Promotions</strong> folder).</li>
                       <li>Click the secure link from <strong>Google / Byahedor</strong> to enter your new password.</li>
-                      <li>Once updated, click the button below to sign in immediately!</li>
+                      <li>After saving your new password, click the button below to sign in!</li>
                     </ol>
                   </div>
 
                   {/* Direct Action Buttons */}
                   <div className="flex flex-col sm:flex-row items-center gap-2 pt-1">
-                    {/* Primary Button: Back to Sign In with New Password */}
                     <button
                       type="button"
                       id="login-screen-goto-signin-btn"
@@ -603,10 +546,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                       className="w-full sm:flex-1 py-2.5 px-3 rounded-xl bg-gradient-to-r from-[#087EA4] to-[#0A6C8C] hover:from-[#096d8e] hover:to-[#085a75] text-white text-xs font-bold shadow-xs hover:shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer"
                     >
                       <KeyRound className="w-3.5 h-3.5" />
-                      <span>Sign In with New Password</span>
+                      <span>Back to Sign In</span>
                     </button>
 
-                    {/* Quick Gmail Link */}
                     {email.toLowerCase().includes('@gmail.com') && (
                       <a
                         href="https://mail.google.com/"
@@ -625,16 +567,16 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                 <div className="flex items-center justify-between text-xs pt-1 px-1">
                   <button
                     type="button"
-                    onClick={handleResendOtp}
-                    disabled={otpResendCountdown > 0 || isSubmitting}
+                    onClick={handleResendResetLink}
+                    disabled={resendCountdown > 0 || isSubmitting}
                     className={`font-semibold transition-colors flex items-center gap-1.5 cursor-pointer ${
-                      otpResendCountdown > 0
+                      resendCountdown > 0
                         ? 'text-slate-400 dark:text-slate-500 cursor-not-allowed'
                         : 'text-[#087EA4] dark:text-[#4DB8E8] hover:underline'
                     }`}
                   >
                     <RotateCcw className={`w-3.5 h-3.5 ${isSubmitting ? 'animate-spin' : ''}`} />
-                    <span>{otpResendCountdown > 0 ? `Resend email in ${otpResendCountdown}s` : 'Resend Reset Email'}</span>
+                    <span>{resendCountdown > 0 ? `Resend link in ${resendCountdown}s` : 'Resend Reset Link'}</span>
                   </button>
 
                   <button
@@ -645,126 +587,97 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                     ← Try another email
                   </button>
                 </div>
+              </div>
+            )}
 
-                {/* Collapsible Manual 6-Digit Code Drawer */}
-                <div className="pt-2 border-t border-slate-200/60 dark:border-slate-700/60">
-                  <button
-                    type="button"
-                    onClick={() => setShowManualOtpEntry(!showManualOtpEntry)}
-                    className="w-full py-1.5 text-center text-[11px] font-semibold text-slate-500 dark:text-slate-400 hover:text-[#087EA4] dark:hover:text-[#4DB8E8] transition-colors cursor-pointer flex items-center justify-center gap-1"
-                  >
-                    <span>{showManualOtpEntry ? 'Hide manual code verification ▲' : 'Received a 6-digit code? Enter code manually ▾'}</span>
-                  </button>
-
-                  {showManualOtpEntry && (
-                    <form onSubmit={handleVerifyOtp} className="space-y-3 mt-3 pt-3 border-t border-dashed border-slate-200 dark:border-slate-700">
-                      {/* 6 Individual Digit Input Boxes */}
-                      <div>
-                        <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block mb-2 text-center">
-                          Enter the 6-Digit Code
-                        </label>
-                        <div className="flex items-center justify-center gap-2 sm:gap-2.5">
-                          {[0, 1, 2, 3, 4, 5].map((index) => (
-                            <input
-                              key={index}
-                              ref={el => { otpInputRefs.current[index] = el; }}
-                              id={`login-otp-digit-${index}`}
-                              type="text"
-                              inputMode="numeric"
-                              pattern="[0-9]*"
-                              maxLength={1}
-                              value={otpDigits[index]}
-                              onChange={(e) => handleOtpDigitChange(index, e.target.value)}
-                              onKeyDown={(e) => handleOtpKeyDown(index, e)}
-                              onPaste={handleOtpPaste}
-                              className="w-10 h-12 text-center text-xl font-bold font-mono rounded-xl bg-slate-50 dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 text-[#102A43] dark:text-white focus:border-[#087EA4] focus:ring-2 focus:ring-[#087EA4]/25 outline-none transition-all shadow-2xs"
-                              autoComplete="one-time-code"
-                            />
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* New Password Input */}
-                      <div>
-                        <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block mb-1">
-                          New Password
-                        </label>
-                        <div className="relative">
-                          <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-3 pointer-events-none" />
-                          <input
-                            type={showNewPassword ? 'text' : 'password'}
-                            value={newPassword}
-                            onChange={(e) => {
-                              setNewPassword(e.target.value);
-                              if (validationError) setValidationError(null);
-                            }}
-                            placeholder="At least 6 characters"
-                            autoComplete="new-password"
-                            className="w-full pl-10 pr-10 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 text-xs font-semibold text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#087EA4]"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setShowNewPassword(!showNewPassword)}
-                            className="absolute right-3 top-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
-                          >
-                            {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Confirm New Password Input */}
-                      <div>
-                        <div className="flex items-center justify-between mb-1">
-                          <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
-                            Confirm New Password
-                          </label>
-                          {newPassword && confirmNewPassword && (
-                            <span className={`text-[10px] font-semibold ${newPassword === confirmNewPassword ? 'text-emerald-500' : 'text-rose-500'}`}>
-                              {newPassword === confirmNewPassword ? 'Passwords match' : 'Passwords do not match'}
-                            </span>
-                          )}
-                        </div>
-                        <div className="relative">
-                          <ShieldCheck className="w-4 h-4 text-slate-400 absolute left-3.5 top-3 pointer-events-none" />
-                          <input
-                            type={showNewPassword ? 'text' : 'password'}
-                            value={confirmNewPassword}
-                            onChange={(e) => {
-                              setConfirmNewPassword(e.target.value);
-                              if (validationError) setValidationError(null);
-                            }}
-                            placeholder="Confirm your new password"
-                            autoComplete="new-password"
-                            className="w-full pl-10 pr-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 text-xs font-semibold text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#087EA4]"
-                          />
-                        </div>
-                      </div>
-
-                      {/* Verify & Reset Button */}
-                      <button
-                        type="submit"
-                        id="login-screen-verify-otp-btn"
-                        disabled={isSubmitting || otpDigits.join('').length !== 6 || !newPassword || !confirmNewPassword}
-                        className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-[#087EA4] to-[#0A6C8C] hover:from-[#096d8e] hover:to-[#085a75] text-white text-xs font-bold shadow-xs hover:shadow-sm transition-all flex items-center justify-center gap-2 active:scale-98 cursor-pointer disabled:opacity-50 mt-1"
-                      >
-                        {isSubmitting ? (
-                          <>
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                            <span>Updating Password...</span>
-                          </>
-                        ) : (
-                          <>
-                            <span>Verify Code &amp; Reset Password</span>
-                            <ArrowRight className="w-4 h-4" />
-                          </>
-                        )}
-                      </button>
-                    </form>
-                  )}
+            {/* ========================================================================= */}
+            {/* IN-APP PASSWORD RESET VIEW (When user arrives via email reset link) */}
+            {/* ========================================================================= */}
+            {mode === 'reset_password' && (
+              <form onSubmit={handleSaveNewPassword} className="space-y-4">
+                <div className="p-3.5 rounded-2xl bg-sky-50 dark:bg-[#132c4a] border border-[#087EA4]/30 flex items-center gap-2.5">
+                  <KeyRound className="w-5 h-5 text-[#087EA4] shrink-0" />
+                  <div className="text-xs text-slate-700 dark:text-slate-200 leading-relaxed">
+                    Setting a new password for <strong className="text-[#087EA4] dark:text-[#4DB8E8]">{resetEmail || email}</strong>
+                  </div>
                 </div>
 
-              </div>
-            ) : (
+                <div>
+                  <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                    New Password
+                  </label>
+                  <div className="relative">
+                    <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-3 pointer-events-none" />
+                    <input
+                      type={showNewPassword ? 'text' : 'password'}
+                      value={newPassword}
+                      onChange={(e) => {
+                        setNewPassword(e.target.value);
+                        if (validationError) setValidationError(null);
+                      }}
+                      placeholder="At least 6 characters"
+                      autoComplete="new-password"
+                      className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 text-xs font-semibold text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#087EA4]"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowNewPassword(!showNewPassword)}
+                      className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                    >
+                      {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                      Confirm New Password
+                    </label>
+                    {newPassword && confirmNewPassword && (
+                      <span className={`text-[10px] font-semibold ${newPassword === confirmNewPassword ? 'text-emerald-500' : 'text-rose-500'}`}>
+                        {newPassword === confirmNewPassword ? 'Passwords match' : 'Passwords do not match'}
+                      </span>
+                    )}
+                  </div>
+                  <div className="relative">
+                    <ShieldCheck className="w-4 h-4 text-slate-400 absolute left-3.5 top-3 pointer-events-none" />
+                    <input
+                      type={showNewPassword ? 'text' : 'password'}
+                      value={confirmNewPassword}
+                      onChange={(e) => {
+                        setConfirmNewPassword(e.target.value);
+                        if (validationError) setValidationError(null);
+                      }}
+                      placeholder="Confirm your new password"
+                      autoComplete="new-password"
+                      className="w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 text-xs font-semibold text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#087EA4]"
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isSubmitting || !newPassword || !confirmNewPassword}
+                  className="w-full min-h-[46px] py-2.5 px-4 rounded-xl bg-gradient-to-r from-[#087EA4] to-[#0A6C8C] hover:from-[#096d8e] hover:to-[#085a75] text-white text-xs sm:text-sm font-bold shadow-xs hover:shadow-sm transition-all flex items-center justify-center gap-2 active:scale-98 cursor-pointer disabled:opacity-50 mt-2"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Saving New Password...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>Save Password &amp; Sign In</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </>
+                  )}
+                </button>
+              </form>
+            )}
+
+            {/* Standard Login / Signup / Forgot Form */}
+            {mode !== 'reset_sent' && mode !== 'reset_password' && (
               <>
                 {/* Prominent Google Sign-In Button */}
                 {mode !== 'forgot' && (
@@ -1000,7 +913,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                         <span>
                           {mode === 'signin' && 'Sign In to Byahedor'}
                           {mode === 'signup' && 'Create Free Account'}
-                          {mode === 'forgot' && 'Send Reset Code via Email'}
+                          {mode === 'forgot' && 'Send Password Reset Link'}
                         </span>
                         <ArrowRight className="w-4 h-4" />
                       </>
