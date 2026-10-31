@@ -21,6 +21,7 @@ import { SettingsView } from './components/SettingsView';
 import { LoadingScreen } from './components/LoadingScreen';
 import { AuthModal } from './components/AuthModal';
 import { LoginScreen } from './components/LoginScreen';
+import { AmihanClimateView } from './components/AmihanClimateView';
 import { DESTINATIONS } from './data/destinations';
 import { useAuth } from './firebase/context';
 import { db } from './firebase/config';
@@ -522,6 +523,16 @@ export default function App() {
             <ExploreMapView
               onStartPlanning={handleStartPlanning}
               onSelectDestination={handleSelectDestination}
+              onNavigate={handleNavigate}
+            />
+          )}
+
+          {currentView === 'climate' && (
+            <AmihanClimateView
+              onNavigate={handleNavigate}
+              onSelectDestination={handleSelectDestination}
+              onStartPlanning={handleStartPlanning}
+              onStartChat={handleStartChat}
             />
           )}
 

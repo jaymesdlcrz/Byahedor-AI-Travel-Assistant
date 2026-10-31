@@ -3,6 +3,7 @@ export type NavView =
   | 'planner'
   | 'destinations'
   | 'explore'
+  | 'climate'
   | 'budget'
   | 'food'
   | 'checklist'

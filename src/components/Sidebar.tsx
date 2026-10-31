@@ -44,6 +44,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'planner' as NavView, label: 'Plan a Trip', emoji: '✈️', badge: 'AI' },
     { id: 'destinations' as NavView, label: 'Destinations', emoji: '📍', badge: null },
     { id: 'explore' as NavView, label: 'Archipelago Map', emoji: '🗺️', badge: '7.1k' },
+    { id: 'climate' as NavView, label: 'Amihan & Climate', emoji: '🌬️', badge: 'Live' },
     { id: 'budget' as NavView, label: 'Budget Planner', emoji: '💰', badge: '₱' },
     { id: 'food' as NavView, label: 'Local Eats', emoji: '🍜', badge: null },
     { id: 'checklist' as NavView, label: 'Travel Checklist', emoji: '🎒', badge: null },

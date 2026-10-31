@@ -34,11 +34,12 @@ import {
   LocateFixed
 } from 'lucide-react';
 import { DESTINATIONS } from '../data/destinations';
-import { Destination } from '../types';
+import { Destination, NavView } from '../types';
 
 interface ExploreMapViewProps {
   onStartPlanning: (destName: string) => void;
   onSelectDestination: (dest: Destination) => void;
+  onNavigate?: (view: NavView) => void;
 }
 
 const GOOGLE_MAPS_API_KEY = (import.meta as any).env?.VITE_GOOGLE_MAPS_API_KEY || 'AIzaSyDVIVQYonip5lXMI3_r4ml5xxWzz9yUGFw';
@@ -116,6 +117,7 @@ interface RouteDefinition {
 export const ExploreMapView: React.FC<ExploreMapViewProps> = ({
   onStartPlanning,
   onSelectDestination,
+  onNavigate,
 }) => {
   const [selectedPin, setSelectedPin] = useState<Destination>(DESTINATIONS[0]);
   const [activeRoute, setActiveRoute] = useState<RouteId>('all');
@@ -707,6 +709,38 @@ export const ExploreMapView: React.FC<ExploreMapViewProps> = ({
                   )}
                 </GoogleMap>
               </APIProvider>
+
+              {/* Floating Amihan & Climate Status HUD on Google Maps */}
+              {activeLayer === 'climate' && (
+                <div className="absolute top-3 left-3 z-10 max-w-xs sm:max-w-sm p-3.5 rounded-2xl bg-white/95 dark:bg-[#0f233a]/95 backdrop-blur-md border border-[#087EA4]/40 shadow-lg space-y-2 text-xs animate-fade-in">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 font-extrabold text-[#087EA4] dark:text-[#4DB8E8]">
+                      <Wind className="w-4 h-4 text-[#FFB84D]" />
+                      <span>Amihan Season Active</span>
+                    </div>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-300">
+                      Nov – May
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-snug">
+                    Cool Northeast winds bring glass-calm waters to <strong>Boracay &amp; Palawan</strong>, while Pacific wave swells peak in <strong>Siargao &amp; Baler</strong>.
+                  </p>
+                  <div className="flex items-center justify-between pt-1 border-t border-slate-100 dark:border-slate-800 text-[10px] font-bold">
+                    <span className="text-emerald-600 dark:text-emerald-400">🌊 West Coast: Flat &amp; Calm</span>
+                    <span className="text-amber-600 dark:text-amber-400">🏄‍♂️ Pacific: Surf Swells</span>
+                  </div>
+                  {onNavigate && (
+                    <button
+                      type="button"
+                      onClick={() => onNavigate('climate')}
+                      className="w-full py-1.5 px-3 rounded-xl bg-gradient-to-r from-[#087EA4] to-[#0A6C8C] hover:from-[#096d8e] text-white font-bold text-[11px] flex items-center justify-center gap-1 shadow-xs transition-all cursor-pointer active:scale-95"
+                    >
+                      <span>Explore Full Climate &amp; Swell Matrix</span>
+                      <ArrowRight className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           ) : (
             /* SVG Map Canvas Viewport with Ocean Gradient */
@@ -1236,25 +1270,79 @@ export const ExploreMapView: React.FC<ExploreMapViewProps> = ({
                 {activeLayer === 'climate' && (
                   <g className="transition-opacity duration-300 pointer-events-none">
                     {/* Amihan Northeast Trade Winds (Cool dry breezes Oct - May) */}
-                    <path
-                      d="M 520 120 Q 420 180 320 220"
-                      fill="none"
-                      stroke="#087EA4"
-                      strokeWidth="2.5"
-                      strokeDasharray="6 6"
-                      className="animate-dash opacity-70"
-                    />
-                    <path
-                      d="M 540 220 Q 450 280 350 320"
-                      fill="none"
-                      stroke="#087EA4"
-                      strokeWidth="2.5"
-                      strokeDasharray="6 6"
-                      className="animate-dash opacity-70"
-                    />
-                    <text x="390" y="160" fill="#087EA4" fontSize="11" fontWeight="bold">
-                      Amihan Winds (Nov - May)
-                    </text>
+                    <g opacity="0.85">
+                      <path
+                        d="M 540 80 Q 440 140 330 190"
+                        fill="none"
+                        stroke="#087EA4"
+                        strokeWidth="3"
+                        strokeDasharray="8 6"
+                        className="animate-dash"
+                      />
+                      <path
+                        d="M 560 160 Q 470 230 360 270"
+                        fill="none"
+                        stroke="#087EA4"
+                        strokeWidth="3"
+                        strokeDasharray="8 6"
+                        className="animate-dash"
+                      />
+                      <path
+                        d="M 520 280 Q 440 340 350 380"
+                        fill="none"
+                        stroke="#087EA4"
+                        strokeWidth="2.5"
+                        strokeDasharray="6 6"
+                        className="animate-dash"
+                      />
+                      <rect x="360" y="125" width="170" height="26" rx="8" fill="rgba(8, 126, 164, 0.9)" />
+                      <text x="370" y="142" fill="#FFFFFF" fontSize="11" fontWeight="bold">
+                        🌬️ Amihan Winds (Nov - May)
+                      </text>
+                    </g>
+
+                    {/* Habagat Southwest Winds Indicator (Summer/Rainy season) */}
+                    <g opacity="0.6">
+                      <path
+                        d="M 90 710 Q 180 620 270 540"
+                        fill="none"
+                        stroke="#39A96B"
+                        strokeWidth="2.5"
+                        strokeDasharray="6 6"
+                        className="animate-dash"
+                      />
+                      <path
+                        d="M 120 770 Q 220 680 310 610"
+                        fill="none"
+                        stroke="#39A96B"
+                        strokeWidth="2"
+                        strokeDasharray="6 6"
+                        className="animate-dash"
+                      />
+                      <rect x="90" y="640" width="180" height="24" rx="8" fill="rgba(57, 169, 107, 0.85)" />
+                      <text x="100" y="656" fill="#FFFFFF" fontSize="10" fontWeight="bold">
+                        🌧️ Habagat Swells (Jun - Oct)
+                      </text>
+                    </g>
+
+                    {/* Pacific Ocean Surfing Swell Symbol */}
+                    <g transform="translate(515, 500)">
+                      <circle cx="0" cy="0" r="14" fill="#FFB84D" fillOpacity="0.2" className="animate-ping" />
+                      <circle cx="0" cy="0" r="9" fill="#FFB84D" />
+                      <text x="14" y="4" fill="#b45309" fontSize="10" fontWeight="bold">
+                        🏄‍♂️ Pacific Swells (Siargao)
+                      </text>
+                    </g>
+
+                    {/* West Coast Calm Water Ripple Symbol */}
+                    <g transform="translate(240, 480)">
+                      <circle cx="0" cy="0" r="16" fill="#087EA4" fillOpacity="0.15" />
+                      <circle cx="0" cy="0" r="10" fill="#087EA4" fillOpacity="0.3" />
+                      <circle cx="0" cy="0" r="4" fill="#087EA4" />
+                      <text x="16" y="4" fill="#087EA4" fontSize="10" fontWeight="bold">
+                        🌊 Glass-Calm Lagoons
+                      </text>
+                    </g>
                   </g>
                 )}
 
@@ -1412,6 +1500,49 @@ export const ExploreMapView: React.FC<ExploreMapViewProps> = ({
 
         {/* Selected Destination Detailed Inspector Card & Route Connections */}
         <div className="lg:col-span-5 space-y-4">
+          {/* Active Monsoon Intelligence Card when Climate layer is on */}
+          {activeLayer === 'climate' && (
+            <div className="bg-gradient-to-br from-sky-50 to-emerald-50/70 dark:from-[#132c4a] dark:to-[#0d3434]/70 rounded-3xl p-4 sm:p-5 border border-[#087EA4]/30 shadow-sm space-y-3 animate-fade-in">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Wind className="w-4 h-4 text-[#087EA4] dark:text-[#4DB8E8]" />
+                  <h4 className="text-xs font-black text-[#102A43] dark:text-white uppercase tracking-wider">
+                    Seasonal Monsoon Intelligence
+                  </h4>
+                </div>
+                <span className="text-[10px] font-bold text-[#087EA4] bg-sky-100 dark:bg-sky-950 px-2 py-0.5 rounded-full">
+                  Live Status
+                </span>
+              </div>
+
+              <p className="text-xs text-slate-700 dark:text-slate-200 leading-relaxed font-medium">
+                The Philippines is influenced by two major wind regimes: <strong>Hanging Amihan</strong> (cool &amp; dry Siberian winds) and <strong>Hanging Habagat</strong> (warm &amp; moist equatorial rains).
+              </p>
+
+              <div className="grid grid-cols-2 gap-2 text-[11px]">
+                <div className="p-2.5 rounded-xl bg-white/80 dark:bg-slate-800/80 border border-slate-200/60 dark:border-slate-700/60">
+                  <span className="font-bold text-[#087EA4] block">Amihan (Nov–May)</span>
+                  <span className="text-slate-500 dark:text-slate-400 text-[10px]">Best for Boracay &amp; Palawan</span>
+                </div>
+                <div className="p-2.5 rounded-xl bg-white/80 dark:bg-slate-800/80 border border-slate-200/60 dark:border-slate-700/60">
+                  <span className="font-bold text-[#39A96B] block">Habagat (Jun–Oct)</span>
+                  <span className="text-slate-500 dark:text-slate-400 text-[10px]">Best for Siargao surfing</span>
+                </div>
+              </div>
+
+              {onNavigate && (
+                <button
+                  type="button"
+                  onClick={() => onNavigate('climate')}
+                  className="w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-[#087EA4] to-[#0A6C8C] hover:from-[#096d8e] text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-xs transition-all cursor-pointer active:scale-95"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-[#FFB84D]" />
+                  <span>Open Full 12-Month Climate Matrix &amp; Swell Monitor</span>
+                </button>
+              )}
+            </div>
+          )}
+
           {/* Destination Hero Card */}
           <div className="bg-white dark:bg-[#0f233a] rounded-3xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-4">
             {/* Card Hero Image */}

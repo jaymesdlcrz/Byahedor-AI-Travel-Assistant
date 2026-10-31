@@ -15,7 +15,8 @@ import {
   Moon,
   Compass,
   Sparkles,
-  ChevronRight
+  ChevronRight,
+  Wind
 } from 'lucide-react';
 import { NavView } from '../types';
 import { ByahedorLogo } from './ByahedorLogo';
@@ -75,6 +76,7 @@ export const MobileNav: React.FC<MobileNavProps> = ({
       title: 'Planning & Discover',
       items: [
         { id: 'explore' as NavView, label: 'Archipelago Map', desc: 'Island routes & sea lanes', icon: Compass },
+        { id: 'climate' as NavView, label: 'Amihan & Climate', desc: 'Monsoons, sea swells & best months', icon: Wind },
         { id: 'budget' as NavView, label: 'Budget Planner', desc: '₱ cost swaps & optimizer', icon: Wallet },
         { id: 'food' as NavView, label: 'Local Culinary Eats', desc: 'Regional dishes & street food', icon: UtensilsCrossed },
         { id: 'checklist' as NavView, label: 'Travel Checklist', desc: 'Packing & island gear', icon: CheckSquare },
